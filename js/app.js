@@ -1,0 +1,99 @@
+// =====================================================================
+// CONFIGURACION: las URLs base de las dos APIs.
+// Cada quien reemplaza la suya con su URL real de Render.
+// =====================================================================
+const URL_API_MINERIA   = "https://mining-api-ilqr.onrender.com";
+const URL_API_METRICAS  = "https://sd-java-metrics-extractor.onrender.com";
+
+
+// =====================================================================
+// FUNCIONES DE AYUDA (ya listas, no hay que tocarlas)
+// =====================================================================
+
+//-----> Cambia el texto y el color de la etiqueta de estado
+function actualizarEtiquetaEstado(idEtiqueta, texto, tipo) {
+    // tipo puede ser: "exito", "alerta", "error", o vacio (neutro)
+    const etiqueta = document.getElementById(idEtiqueta);
+    etiqueta.textContent = texto;
+    etiqueta.className = "etiqueta-estado" + (tipo ? " " + tipo : "");
+}
+
+//-----> Crea una fila visual simple tipo "Nombre: Valor"
+function crearFilaDato(nombre, valor) {
+    const fila = document.createElement("div");
+    fila.className = "fila-dato";
+    fila.innerHTML = `<span>${nombre}</span><span class="valor">${valor}</span>`;
+    return fila;
+}
+
+//-----> Limpia un contenedor y le pone un mensaje de error legible
+function mostrarError(idContenedor, mensaje) {
+    const contenedor = document.getElementById(idContenedor);
+    contenedor.innerHTML = "";
+    const p = document.createElement("p");
+    p.className = "texto-ayuda";
+    p.textContent = "⚠️ " + mensaje;
+    contenedor.appendChild(p);
+}
+
+
+// =====================================================================
+// SECCION DE EBER: minería de repositorios
+// TODO (Eber): llenar esta funcion para que pinte los datos reales
+// de su API dentro de #contenido-mineria
+// =====================================================================
+async function cargarMineria() {
+    const contenedor = document.getElementById("contenido-mineria");
+
+    try {
+        // Eber: aqui va el fetch() a su endpoint de status/summary
+        // const respuesta = await fetch(`${URL_API_MINERIA}/api/catalog/status`);
+        // const datos = await respuesta.json();
+
+        contenedor.innerHTML = "";
+        contenedor.appendChild(crearFilaDato("Pendiente de implementar", "—"));
+
+    } catch (error) {
+        mostrarError("contenido-mineria", "No se pudo conectar con la API de minería.");
+    }
+}
+
+//-----> TODO (Eber): boton para disparar /api/mining/run
+document.getElementById("btn-run-mineria").addEventListener("click", async () => {
+    // Eber: aqui va el POST a su endpoint /run, deshabilitar el boton
+    // mientras corre, y volver a llamar cargarMineria() cuando termine.
+    console.log("TODO: implementar boton de mineria");
+});
+
+
+// =====================================================================
+// SECCION DE TANIA: extracción de métricas
+// TODO (Tania): llenar esta funcion para que pinte los datos reales
+// de tu API dentro de #contenido-metricas
+// =====================================================================
+async function cargarMetricas() {
+    const contenedor = document.getElementById("contenido-metricas");
+
+    try {
+        // Tania: aqui va el fetch() a tu endpoint /api/metrics/summary
+
+        contenedor.innerHTML = "";
+        contenedor.appendChild(crearFilaDato("Pendiente de implementar", "—"));
+
+    } catch (error) {
+        mostrarError("contenido-metricas", "No se pudo conectar con la API de métricas.");
+    }
+}
+
+//-----> TODO (Tania): boton para disparar /api/metrics/run
+document.getElementById("btn-run-metricas").addEventListener("click", async () => {
+    // Tania: aqui va el POST a tu endpoint /run
+    console.log("TODO: implementar boton de metricas");
+});
+
+
+// =====================================================================
+// ARRANQUE: al cargar la pagina, pide los datos de ambas secciones
+// =====================================================================
+cargarMineria();
+cargarMetricas();

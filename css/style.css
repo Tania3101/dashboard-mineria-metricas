@@ -1,0 +1,207 @@
+/* =================================================================
+   RESET BASICO: quita margenes/paddings raros que trae cada
+   navegador por defecto, para empezar desde cero limpio.
+   ================================================================= */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+/* =================================================================
+   VARIABLES DE COLOR: cambiarlas aqui cambia TODO el sitio.
+   Tema claro, colores suaves, nada saturado.
+   ================================================================= */
+:root {
+    --color-fondo: #f7f8fa;
+    --color-tarjeta: #ffffff;
+    --color-texto-principal: #1f2430;
+    --color-texto-secundario: #6b7280;
+    --color-borde: #e5e7eb;
+
+    --color-primario: #2563eb;
+    --color-primario-hover: #1d4ed8;
+
+    /* Colores de estado (para status de repos) */
+    --color-exito: #16a34a;
+    --color-exito-fondo: #dcfce7;
+    --color-alerta: #ca8a04;
+    --color-alerta-fondo: #fef9c3;
+    --color-error: #dc2626;
+    --color-error-fondo: #fee2e2;
+    --color-neutro: #6b7280;
+    --color-neutro-fondo: #f3f4f6;
+
+    --sombra-tarjeta: 0 1px 3px rgba(0, 0, 0, 0.08), 0 1px 2px rgba(0, 0, 0, 0.04);
+    --radio-borde: 12px;
+}
+
+/* =================================================================
+   TIPOGRAFIA Y FONDO GENERAL
+   ================================================================= */
+body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+                 "Inter", sans-serif;
+    background-color: var(--color-fondo);
+    color: var(--color-texto-principal);
+    line-height: 1.5;
+}
+
+/* =================================================================
+   ENCABEZADO
+   ================================================================= */
+.encabezado {
+    padding: 2rem 1.5rem 1.5rem;
+    text-align: center;
+}
+
+.encabezado h1 {
+    font-size: 1.75rem;
+    font-weight: 700;
+    margin-bottom: 0.25rem;
+}
+
+.subtitulo {
+    color: var(--color-texto-secundario);
+    font-size: 0.95rem;
+}
+
+/* =================================================================
+   CONTENEDOR PRINCIPAL: las 2 tarjetas lado a lado en pantallas
+   grandes, apiladas en pantallas angostas (celular/tablet).
+   ================================================================= */
+.contenedor-principal {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 0 1.5rem 3rem;
+
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.5rem;
+}
+
+/* En pantallas angostas (menos de 800px), apila las tarjetas
+   en vez de ponerlas lado a lado */
+@media (max-width: 800px) {
+    .contenedor-principal {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* =================================================================
+   TARJETAS (cada seccion: minería y métricas)
+   ================================================================= */
+.tarjeta {
+    background-color: var(--color-tarjeta);
+    border: 1px solid var(--color-borde);
+    border-radius: var(--radio-borde);
+    box-shadow: var(--sombra-tarjeta);
+    padding: 1.5rem;
+}
+
+.tarjeta h2 {
+    font-size: 1.25rem;
+    font-weight: 600;
+    margin-bottom: 1rem;
+}
+
+/* =================================================================
+   CONTROLES (boton + etiqueta de estado dentro de cada tarjeta)
+   ================================================================= */
+.controles {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+    margin-bottom: 1.25rem;
+}
+
+.boton {
+    border: none;
+    border-radius: 8px;
+    padding: 0.6rem 1.1rem;
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.15s ease;
+}
+
+.boton-primario {
+    background-color: var(--color-primario);
+    color: white;
+}
+
+.boton-primario:hover {
+    background-color: var(--color-primario-hover);
+}
+
+.boton:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+/* =================================================================
+   ETIQUETAS DE ESTADO (pending / complete / failed / corriendo)
+   ================================================================= */
+.etiqueta-estado {
+    font-size: 0.8rem;
+    font-weight: 600;
+    padding: 0.3rem 0.7rem;
+    border-radius: 999px;
+    background-color: var(--color-neutro-fondo);
+    color: var(--color-neutro);
+}
+
+.etiqueta-estado.exito {
+    background-color: var(--color-exito-fondo);
+    color: var(--color-exito);
+}
+
+.etiqueta-estado.alerta {
+    background-color: var(--color-alerta-fondo);
+    color: var(--color-alerta);
+}
+
+.etiqueta-estado.error {
+    background-color: var(--color-error-fondo);
+    color: var(--color-error);
+}
+
+/* =================================================================
+   CONTENIDO DE DATOS (donde cada quien va a pintar su info)
+   ================================================================= */
+.contenido-datos {
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+}
+
+.texto-ayuda {
+    color: var(--color-texto-secundario);
+    font-size: 0.9rem;
+}
+
+/* Fila individual de dato, ej: "metrics_complete: 27" */
+.fila-dato {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.5rem 0.75rem;
+    background-color: var(--color-fondo);
+    border-radius: 8px;
+    font-size: 0.9rem;
+}
+
+.fila-dato .valor {
+    font-weight: 700;
+}
+
+/* =================================================================
+   PIE DE PAGINA
+   ================================================================= */
+.pie-pagina {
+    text-align: center;
+    padding: 1.5rem;
+    color: var(--color-texto-secundario);
+    font-size: 0.8rem;
+}
