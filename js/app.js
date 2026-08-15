@@ -36,26 +36,74 @@ function mostrarError(idContenedor, mensaje) {
     contenedor.appendChild(p);
 }
 
-
 // =====================================================================
 // SECCION DE EBER: minería de repositorios
-// TODO (Eber): llenar esta funcion para que pinte los datos reales
-// de su API dentro de #contenido-mineria
 // =====================================================================
 async function cargarMineria() {
     const contenedor = document.getElementById("contenido-mineria");
 
     try {
-        // Eber: aqui va el fetch() a su endpoint de status/summary
-        // const respuesta = await fetch(`${URL_API_MINERIA}/api/catalog/status`);
-        // const datos = await respuesta.json();
+        const respuesta = await fetch(`${URL_API_MINERIA}/api/catalog/status`);
+        const datos = await respuesta.json();
 
         contenedor.innerHTML = "";
-        contenedor.appendChild(crearFilaDato("Pendiente de implementar", "—"));
+        contenedor.appendChild(crearFilaDato("Pendientes", datos.pending));
+        contenedor.appendChild(crearFilaDato("Completos", datos.complete));
+        contenedor.appendChild(crearFilaDato("Fallidos", datos.failed));
+
+        // Actualiza también la etiqueta de estado con un resumen rápido
+        if (datos.pending === 0) {
+            actualizarEtiquetaEstado("estado-mineria", "Todo procesado", "exito");
+        } else {
+            actualizarEtiquetaEstado("estado-mineria", `${datos.pending} pendientes`, "alerta");
+        }
 
     } catch (error) {
         mostrarError("contenido-mineria", "No se pudo conectar con la API de minería.");
+        actualizarEtiquetaEstado("estado-mineria", "Error de conexión", "error");
     }
+}
+
+//-----> Boton para disparar /api/mining/run, con polling hasta que termine
+document.getElementById("btn-run-mineria").addEventListener("click", async () => {
+    const boton = document.getElementById("btn-run-mineria");
+    boton.disabled = true;
+    actualizarEtiquetaEstado("estado-mineria", "Iniciando...", "alerta");
+
+    try {
+        await fetch(`${URL_API_MINERIA}/api/mining/run`, { method: "POST" });
+        pollEstadoMineria(boton);
+    } catch (error) {
+        actualizarEtiquetaEstado("estado-mineria", "Error al iniciar", "error");
+        boton.disabled = false;
+    }
+});
+
+//-----> Revisa el estado cada 5 segundos hasta que el pipeline termine
+function pollEstadoMineria(boton) {
+    const intervalo = setInterval(async () => {
+        try {
+            const respuesta = await fetch(`${URL_API_MINERIA}/api/mining/status`);
+            const status = await respuesta.text();
+
+            if (status === "running") {
+                actualizarEtiquetaEstado("estado-mineria", "Corriendo...", "alerta");
+            } else if (status === "completed") {
+                clearInterval(intervalo);
+                actualizarEtiquetaEstado("estado-mineria", "Completado", "exito");
+                boton.disabled = false;
+                cargarMineria(); // refresca con los datos nuevos
+            } else if (status.startsWith("error")) {
+                clearInterval(intervalo);
+                actualizarEtiquetaEstado("estado-mineria", "Error en el proceso", "error");
+                boton.disabled = false;
+            }
+        } catch (error) {
+            clearInterval(intervalo);
+            actualizarEtiquetaEstado("estado-mineria", "Error de conexión", "error");
+            boton.disabled = false;
+        }
+    }, 5000);
 }
 
 //-----> TODO (Eber): boton para disparar /api/mining/run
