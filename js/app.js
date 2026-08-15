@@ -123,10 +123,31 @@ async function cargarMetricas() {
     const contenedor = document.getElementById("contenido-metricas");
 
     try {
-        // Tania: aqui va el fetch() a tu endpoint /api/metrics/summary
+        // 1. Pide los datos a tu API
+        const respuesta = await fetch(`${URL_API_METRICAS}/api/metrics/summary`);
 
+        // 2. Si la API respondio con un error (ej. 500), lo detectamos aqui
+        if (!respuesta.ok) {
+            throw new Error(`La API respondio con error ${respuesta.status}`);
+        }
+
+        // 3. Convierte la respuesta a un objeto de JavaScript que podamos usar
+        const datos = await respuesta.json();
+
+        // 4. Limpia el mensaje de "Cargando..." antes de poner los datos reales
         contenedor.innerHTML = "";
-        contenedor.appendChild(crearFilaDato("Pendiente de implementar", "—"));
+
+        // 5. Pinta cada status del catalogo como una fila
+        const statusRepos = datos.reposPorStatus;
+        contenedor.appendChild(crearFilaDato("Pendientes", statusRepos.pending));
+        contenedor.appendChild(crearFilaDato("En progreso", statusRepos.metrics_in_progress));
+        contenedor.appendChild(crearFilaDato("Completados", statusRepos.metrics_complete));
+        contenedor.appendChild(crearFilaDato("Fallidos", statusRepos.metrics_failed));
+
+        // 6. Pinta el espacio usado en Mongo
+        contenedor.appendChild(
+            crearFilaDato("Espacio usado (métricas estáticas)", datos.espacioRepoClassMetricsMB + " MB")
+        );
 
     } catch (error) {
         mostrarError("contenido-metricas", "No se pudo conectar con la API de métricas.");
