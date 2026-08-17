@@ -69,6 +69,19 @@ function crearFilaRepoEnProgreso(idRepo, metricsStatus) {
     return fila;
 }
 
+//-----> 🔌 NUEVO: crea la fila visual de un repo "solo estatico completo",
+//-----> mostrando la razon por la que la fase dinamica no genero datos
+function crearFilaRepoSoloEstatico(idRepo, razonSinDatos) {
+    const fila = document.createElement("div");
+    fila.className = "fila-repo";
+
+    fila.innerHTML = `
+        <span class="fila-repo-nombre">${idRepo}</span>
+        <span class="texto-ayuda">${razonSinDatos || "Sin razón registrada."}</span>
+    `;
+    return fila;
+}
+
 // =====================================================================
 // SECCION DE EBER: minería de repositorios
 // =====================================================================
@@ -159,6 +172,8 @@ async function cargarMetricas() {
         const statusRepos = datos.reposPorStatus;
         contenedor.appendChild(crearFilaDato("Pendientes", statusRepos.pending));
         contenedor.appendChild(crearFilaDato("En progreso", statusRepos.metrics_in_progress, "alerta"));
+        //-----> 🔌 NUEVO: repos con estatica completa pero sin datos dinamicos
+        contenedor.appendChild(crearFilaDato("Solo estáticos", statusRepos.metrics_static_only, "alerta"));
         contenedor.appendChild(crearFilaDato("Completados", statusRepos.metrics_complete, "exito"));
         contenedor.appendChild(crearFilaDato("Fallidos", statusRepos.metrics_failed, "error"));
 
@@ -209,6 +224,44 @@ async function cargarReposEnProgreso() {
 
     } catch (error) {
         mostrarError("lista-en-progreso", "No se pudo cargar la lista de repos en progreso.");
+    }
+}
+
+//-----> 🔌 NUEVO: carga la lista de repos "solo estatico completo" (la fase
+//-----> estatica termino bien, pero la dinamica no genero datos), con la
+//-----> razon guardada por el backend en metrics.dinamicas.razonSinDatos
+async function cargarReposSoloEstaticos() {
+    const contenedor = document.getElementById("lista-solo-estaticos");
+
+    try {
+        const respuesta = await fetch(`${URL_API_METRICAS}/api/metrics/repos`);
+
+        if (!respuesta.ok) {
+            throw new Error(`La API respondio con error ${respuesta.status}`);
+        }
+
+        const repos = await respuesta.json();
+        const soloEstaticos = repos.filter(r => r.status === "metrics_static_only");
+
+        contenedor.innerHTML = "";
+
+        if (soloEstaticos.length === 0) {
+            const p = document.createElement("p");
+            p.className = "texto-ayuda";
+            p.textContent = "Ningún repo en este estado ahora mismo.";
+            contenedor.appendChild(p);
+            return;
+        }
+
+        soloEstaticos.forEach(repo => {
+            const razon = repo.metrics && repo.metrics.dinamicas
+                ? repo.metrics.dinamicas.razonSinDatos
+                : null;
+            contenedor.appendChild(crearFilaRepoSoloEstatico(repo._id, razon));
+        });
+
+    } catch (error) {
+        mostrarError("lista-solo-estaticos", "No se pudo cargar la lista de repos solo-estáticos.");
     }
 }
 
@@ -307,6 +360,7 @@ function revisarEstadoMetricas(botonQueDisparo, idRepo) {
                 // Refresca todo lo que pudo haber cambiado
                 cargarMetricas();
                 cargarReposEnProgreso();
+                cargarReposSoloEstaticos();
             }
         } catch (error) {
             clearInterval(intervalo);
@@ -324,3 +378,4 @@ function revisarEstadoMetricas(botonQueDisparo, idRepo) {
 cargarMineria();
 cargarMetricas();
 cargarReposEnProgreso();
+cargarReposSoloEstaticos();
