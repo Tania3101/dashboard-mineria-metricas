@@ -18,11 +18,16 @@ function actualizarEtiquetaEstado(idEtiqueta, texto, tipo) {
     etiqueta.className = "etiqueta-estado" + (tipo ? " " + tipo : "");
 }
 
-//-----> Crea una fila visual simple tipo "Nombre: Valor"
-function crearFilaDato(nombre, valor) {
+//-----> Crea una fila visual tipo "Nombre: Valor".
+//-----> El tercer parametro es opcional: "exito", "error" o "alerta"
+//-----> para que el numero se pinte de verde/rojo/amarillo. Si no se
+//-----> manda, el valor se ve en negro normal (como antes).
+function crearFilaDato(nombre, valor, tipo) {
     const fila = document.createElement("div");
     fila.className = "fila-dato";
-    fila.innerHTML = `<span>${nombre}</span><span class="valor">${valor}</span>`;
+
+    const claseValor = "valor" + (tipo ? " " + tipo : "");
+    fila.innerHTML = `<span>${nombre}</span><span class="${claseValor}">${valor}</span>`;
     return fila;
 }
 
@@ -48,8 +53,8 @@ async function cargarMineria() {
 
         contenedor.innerHTML = "";
         contenedor.appendChild(crearFilaDato("Pendientes", datos.pending));
-        contenedor.appendChild(crearFilaDato("Completos", datos.complete));
-        contenedor.appendChild(crearFilaDato("Fallidos", datos.failed));
+        contenedor.appendChild(crearFilaDato("Completos", datos.complete, "exito"));
+        contenedor.appendChild(crearFilaDato("Fallidos", datos.failed, "error"));
 
         // Actualiza también la etiqueta de estado con un resumen rápido
         if (datos.pending === 0) {
@@ -106,18 +111,9 @@ function pollEstadoMineria(boton) {
     }, 5000);
 }
 
-//-----> TODO (Eber): boton para disparar /api/mining/run
-document.getElementById("btn-run-mineria").addEventListener("click", async () => {
-    // Eber: aqui va el POST a su endpoint /run, deshabilitar el boton
-    // mientras corre, y volver a llamar cargarMineria() cuando termine.
-    console.log("TODO: implementar boton de mineria");
-});
-
 
 // =====================================================================
 // SECCION DE TANIA: extracción de métricas
-// TODO (Tania): llenar esta funcion para que pinte los datos reales
-// de tu API dentro de #contenido-metricas
 // =====================================================================
 async function cargarMetricas() {
     const contenedor = document.getElementById("contenido-metricas");
@@ -137,12 +133,13 @@ async function cargarMetricas() {
         // 4. Limpia el mensaje de "Cargando..." antes de poner los datos reales
         contenedor.innerHTML = "";
 
-        // 5. Pinta cada status del catalogo como una fila
+        // 5. Pinta cada status del catalogo como una fila, con su color
         const statusRepos = datos.reposPorStatus;
-       contenedor.appendChild(crearFilaDato("Pendientes", statusRepos.pending));
-contenedor.appendChild(crearFilaDato("En progreso", statusRepos.metrics_in_progress, "alerta"));
-contenedor.appendChild(crearFilaDato("Completados", statusRepos.metrics_complete, "exito"));
-contenedor.appendChild(crearFilaDato("Fallidos", statusRepos.metrics_failed, "error"));
+        contenedor.appendChild(crearFilaDato("Pendientes", statusRepos.pending));
+        contenedor.appendChild(crearFilaDato("En progreso", statusRepos.metrics_in_progress, "alerta"));
+        contenedor.appendChild(crearFilaDato("Completados", statusRepos.metrics_complete, "exito"));
+        contenedor.appendChild(crearFilaDato("Fallidos", statusRepos.metrics_failed, "error"));
+
         // 6. Pinta el espacio usado en Mongo
         contenedor.appendChild(
             crearFilaDato("Espacio usado (métricas estáticas)", datos.espacioRepoClassMetricsMB + " MB")
@@ -153,11 +150,59 @@ contenedor.appendChild(crearFilaDato("Fallidos", statusRepos.metrics_failed, "er
     }
 }
 
-//-----> TODO (Tania): boton para disparar /api/metrics/run
+//-----> Boton para disparar /api/metrics/run, con polling hasta que termine
 document.getElementById("btn-run-metricas").addEventListener("click", async () => {
-    // Tania: aqui va el POST a tu endpoint /run
-    console.log("TODO: implementar boton de metricas");
+    const boton = document.getElementById("btn-run-metricas");
+
+    try {
+        boton.disabled = true;
+        boton.textContent = "Iniciando...";
+
+        const respuesta = await fetch(`${URL_API_METRICAS}/api/metrics/run`, {
+            method: "POST"
+        });
+
+        if (respuesta.status === 409) {
+            actualizarEtiquetaEstado("estado-metricas", "Ya hay un proceso corriendo", "alerta");
+            boton.disabled = false;
+            boton.textContent = "Correr análisis de métricas";
+            return;
+        }
+
+        actualizarEtiquetaEstado("estado-metricas", "Corriendo...", "alerta");
+        boton.textContent = "Corriendo...";
+
+        revisarEstadoMetricas(boton);
+
+    } catch (error) {
+        actualizarEtiquetaEstado("estado-metricas", "Error al iniciar", "error");
+        boton.disabled = false;
+        boton.textContent = "Correr análisis de métricas";
+    }
 });
+
+//-----> Revisa /api/metrics/status repetidamente hasta que el proceso termine
+function revisarEstadoMetricas(boton) {
+    const intervalo = setInterval(async () => {
+        try {
+            const respuesta = await fetch(`${URL_API_METRICAS}/api/metrics/status`);
+            const estado = await respuesta.json();
+
+            if (!estado.corriendo) {
+                clearInterval(intervalo);
+                boton.disabled = false;
+                boton.textContent = "Correr análisis de métricas";
+                actualizarEtiquetaEstado("estado-metricas", "Completado", "exito");
+                cargarMetricas();
+            }
+        } catch (error) {
+            clearInterval(intervalo);
+            boton.disabled = false;
+            boton.textContent = "Correr análisis de métricas";
+            actualizarEtiquetaEstado("estado-metricas", "Error de conexión", "error");
+        }
+    }, 5000);
+}
 
 
 // =====================================================================
