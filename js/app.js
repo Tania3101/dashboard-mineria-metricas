@@ -173,7 +173,7 @@ async function cargarMetricas() {
         contenedor.appendChild(crearFilaDato("Pendientes", statusRepos.pending));
         contenedor.appendChild(crearFilaDato("En progreso", statusRepos.metrics_in_progress, "alerta"));
         //-----> 🔌 NUEVO: repos con estatica completa pero sin datos dinamicos
-        contenedor.appendChild(crearFilaDato("Solo estáticos", statusRepos.metrics_static_only, "alerta"));
+        contenedor.appendChild(crearFilaDato("Solo estáticos", statusRepos.metrics_static_only || 0, "alerta"));
         contenedor.appendChild(crearFilaDato("Completados", statusRepos.metrics_complete, "exito"));
         contenedor.appendChild(crearFilaDato("Fallidos", statusRepos.metrics_failed, "error"));
 
