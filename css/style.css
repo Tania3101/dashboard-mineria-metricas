@@ -80,8 +80,6 @@ body {
     gap: 1.5rem;
 }
 
-/* En pantallas angostas (menos de 800px), apila las tarjetas
-   en vez de ponerlas lado a lado */
 @media (max-width: 800px) {
     .contenedor-principal {
         grid-template-columns: 1fr;
@@ -116,6 +114,14 @@ body {
     margin-bottom: 1.25rem;
 }
 
+/* 🔌 NUEVO: separacion extra para el bloque de "analizar un solo repo",
+   para que no se vea pegado al bloque de controles principal */
+.controles-secundario {
+    margin-top: 0.5rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--color-borde);
+}
+
 .boton {
     border: none;
     border-radius: 8px;
@@ -135,9 +141,38 @@ body {
     background-color: var(--color-primario-hover);
 }
 
+/* 🔌 NUEVO: boton secundario, mas discreto que el primario */
+.boton-secundario {
+    background-color: var(--color-neutro-fondo);
+    color: var(--color-texto-principal);
+    border: 1px solid var(--color-borde);
+}
+
+.boton-secundario:hover {
+    background-color: var(--color-borde);
+}
+
 .boton:disabled {
     opacity: 0.6;
     cursor: not-allowed;
+}
+
+/* 🔌 NUEVO: campo de texto para escribir el nombre del repo */
+.campo-texto {
+    flex: 1;
+    min-width: 180px;
+    padding: 0.6rem 0.8rem;
+    border: 1px solid var(--color-borde);
+    border-radius: 8px;
+    font-size: 0.9rem;
+    font-family: inherit;
+    background-color: var(--color-fondo);
+    color: var(--color-texto-principal);
+}
+
+.campo-texto:focus {
+    outline: 2px solid var(--color-primario);
+    outline-offset: 1px;
 }
 
 /* =================================================================
@@ -195,6 +230,7 @@ body {
 .fila-dato .valor {
     font-weight: 700;
 }
+
 .fila-dato .valor.exito {
     color: var(--color-exito);
 }
@@ -204,6 +240,69 @@ body {
 }
 
 .fila-dato .valor.alerta {
+    color: var(--color-alerta);
+}
+
+/* =================================================================
+   🔌 NUEVO: SUBSECCIONES (lista de repos en progreso / lista de Eber)
+   ================================================================= */
+.subseccion {
+    margin-top: 1.25rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--color-borde);
+}
+
+.subseccion h3 {
+    font-size: 0.95rem;
+    font-weight: 600;
+    margin-bottom: 0.6rem;
+    color: var(--color-texto-secundario);
+}
+
+/* Contenedores con lista larga: que no crezcan sin limite */
+.contenido-scroll {
+    max-height: 220px;
+    overflow-y: auto;
+}
+
+/* Fila de un repo individual, con nombre + badges de fase */
+.fila-repo {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+    padding: 0.6rem 0.75rem;
+    background-color: var(--color-fondo);
+    border-radius: 8px;
+    font-size: 0.85rem;
+}
+
+.fila-repo-nombre {
+    font-weight: 600;
+    word-break: break-all;
+}
+
+.fila-repo-badges {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.badge-fase {
+    font-size: 0.75rem;
+    font-weight: 600;
+    padding: 0.2rem 0.55rem;
+    border-radius: 999px;
+    background-color: var(--color-neutro-fondo);
+    color: var(--color-neutro);
+}
+
+.badge-fase.exito {
+    background-color: var(--color-exito-fondo);
+    color: var(--color-exito);
+}
+
+.badge-fase.alerta {
+    background-color: var(--color-alerta-fondo);
     color: var(--color-alerta);
 }
 

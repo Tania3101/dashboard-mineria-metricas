@@ -41,6 +41,34 @@ function mostrarError(idContenedor, mensaje) {
     contenedor.appendChild(p);
 }
 
+//-----> 🔌 NUEVO: convierte un valor de metricsStatus ("pending",
+//-----> "complete", o ausente) en una palabra + color legibles
+function traducirFaseStatus(valor) {
+    if (valor === "complete") return { texto: "Completa", tipo: "exito" };
+    if (valor === "pending") return { texto: "Pendiente", tipo: "alerta" };
+    return { texto: "Sin iniciar", tipo: "" };
+}
+
+//-----> 🔌 NUEVO: crea la fila visual de un repo en progreso, mostrando
+//-----> por separado como va su fase estatica y su fase dinamica
+function crearFilaRepoEnProgreso(idRepo, metricsStatus) {
+    const fila = document.createElement("div");
+    fila.className = "fila-repo";
+
+    const status = metricsStatus || {};
+    const estatica = traducirFaseStatus(status.static);
+    const dinamica = traducirFaseStatus(status.dynamic);
+
+    fila.innerHTML = `
+        <span class="fila-repo-nombre">${idRepo}</span>
+        <span class="fila-repo-badges">
+            <span class="badge-fase ${estatica.tipo}">Estática: ${estatica.texto}</span>
+            <span class="badge-fase ${dinamica.tipo}">Dinámica: ${dinamica.texto}</span>
+        </span>
+    `;
+    return fila;
+}
+
 // =====================================================================
 // SECCION DE EBER: minería de repositorios
 // =====================================================================
@@ -56,7 +84,6 @@ async function cargarMineria() {
         contenedor.appendChild(crearFilaDato("Completos", datos.complete, "exito"));
         contenedor.appendChild(crearFilaDato("Fallidos", datos.failed, "error"));
 
-        // Actualiza también la etiqueta de estado con un resumen rápido
         if (datos.pending === 0) {
             actualizarEtiquetaEstado("estado-mineria", "Todo procesado", "exito");
         } else {
@@ -97,7 +124,7 @@ function pollEstadoMineria(boton) {
                 clearInterval(intervalo);
                 actualizarEtiquetaEstado("estado-mineria", "Completado", "exito");
                 boton.disabled = false;
-                cargarMineria(); // refresca con los datos nuevos
+                cargarMineria();
             } else if (status.startsWith("error")) {
                 clearInterval(intervalo);
                 actualizarEtiquetaEstado("estado-mineria", "Error en el proceso", "error");
@@ -119,30 +146,31 @@ async function cargarMetricas() {
     const contenedor = document.getElementById("contenido-metricas");
 
     try {
-        // 1. Pide los datos a tu API
         const respuesta = await fetch(`${URL_API_METRICAS}/api/metrics/summary`);
 
-        // 2. Si la API respondio con un error (ej. 500), lo detectamos aqui
         if (!respuesta.ok) {
             throw new Error(`La API respondio con error ${respuesta.status}`);
         }
 
-        // 3. Convierte la respuesta a un objeto de JavaScript que podamos usar
         const datos = await respuesta.json();
 
-        // 4. Limpia el mensaje de "Cargando..." antes de poner los datos reales
         contenedor.innerHTML = "";
 
-        // 5. Pinta cada status del catalogo como una fila, con su color
         const statusRepos = datos.reposPorStatus;
         contenedor.appendChild(crearFilaDato("Pendientes", statusRepos.pending));
         contenedor.appendChild(crearFilaDato("En progreso", statusRepos.metrics_in_progress, "alerta"));
         contenedor.appendChild(crearFilaDato("Completados", statusRepos.metrics_complete, "exito"));
         contenedor.appendChild(crearFilaDato("Fallidos", statusRepos.metrics_failed, "error"));
 
-        // 6. Pinta el espacio usado en Mongo
+        // 🔌 NUEVO: suma los 3 pedazos de espacio en vez de mostrar solo
+        // el de metricas estaticas
+        const espacioTotalMB =
+            (datos.espacioRepoCatalogMB || 0) +
+            (datos.espacioRepoClassMetricsMB || 0) +
+            (datos.espacioRepoDynamicMetricsMB || 0);
+
         contenedor.appendChild(
-            crearFilaDato("Espacio usado (métricas estáticas)", datos.espacioRepoClassMetricsMB + " MB")
+            crearFilaDato("Espacio total usado en Mongo", espacioTotalMB.toFixed(2) + " MB")
         );
 
     } catch (error) {
@@ -150,7 +178,41 @@ async function cargarMetricas() {
     }
 }
 
-//-----> Boton para disparar /api/metrics/run, con polling hasta que termine
+//-----> 🔌 NUEVO: carga la lista de repos "en progreso" con el detalle
+//-----> de en que fase van (estatica/dinamica)
+async function cargarReposEnProgreso() {
+    const contenedor = document.getElementById("lista-en-progreso");
+
+    try {
+        const respuesta = await fetch(`${URL_API_METRICAS}/api/metrics/repos`);
+
+        if (!respuesta.ok) {
+            throw new Error(`La API respondio con error ${respuesta.status}`);
+        }
+
+        const repos = await respuesta.json();
+        const enProgreso = repos.filter(r => r.status === "metrics_in_progress");
+
+        contenedor.innerHTML = "";
+
+        if (enProgreso.length === 0) {
+            const p = document.createElement("p");
+            p.className = "texto-ayuda";
+            p.textContent = "Ningún repo en progreso ahora mismo.";
+            contenedor.appendChild(p);
+            return;
+        }
+
+        enProgreso.forEach(repo => {
+            contenedor.appendChild(crearFilaRepoEnProgreso(repo._id, repo.metricsStatus));
+        });
+
+    } catch (error) {
+        mostrarError("lista-en-progreso", "No se pudo cargar la lista de repos en progreso.");
+    }
+}
+
+//-----> Boton para disparar /api/metrics/run (TODOS los pendientes)
 document.getElementById("btn-run-metricas").addEventListener("click", async () => {
     const boton = document.getElementById("btn-run-metricas");
 
@@ -172,7 +234,7 @@ document.getElementById("btn-run-metricas").addEventListener("click", async () =
         actualizarEtiquetaEstado("estado-metricas", "Corriendo...", "alerta");
         boton.textContent = "Corriendo...";
 
-        revisarEstadoMetricas(boton);
+        revisarEstadoMetricas(boton, null);
 
     } catch (error) {
         actualizarEtiquetaEstado("estado-metricas", "Error al iniciar", "error");
@@ -181,8 +243,49 @@ document.getElementById("btn-run-metricas").addEventListener("click", async () =
     }
 });
 
-//-----> Revisa /api/metrics/status repetidamente hasta que el proceso termine
-function revisarEstadoMetricas(boton) {
+//-----> 🔌 NUEVO: boton para disparar /api/metrics/run?repo=... (UN repo)
+document.getElementById("btn-run-repo-unico").addEventListener("click", async () => {
+    const boton = document.getElementById("btn-run-repo-unico");
+    const input = document.getElementById("input-repo-unico");
+    const idRepo = input.value.trim();
+
+    if (idRepo === "") {
+        actualizarEtiquetaEstado("estado-repo-unico", "Escribe el nombre del repo (owner/nombre)", "alerta");
+        return;
+    }
+
+    try {
+        boton.disabled = true;
+        boton.textContent = "Iniciando...";
+        document.getElementById("estado-repo-unico").textContent = "";
+
+        const respuesta = await fetch(
+            `${URL_API_METRICAS}/api/metrics/run?repo=${encodeURIComponent(idRepo)}`,
+            { method: "POST" }
+        );
+
+        if (respuesta.status === 409) {
+            document.getElementById("estado-repo-unico").textContent =
+                "⚠️ Ya hay un proceso corriendo, espera a que termine.";
+            boton.disabled = false;
+            boton.textContent = "Analizar solo este repo";
+            return;
+        }
+
+        document.getElementById("estado-repo-unico").textContent = `Corriendo análisis de: ${idRepo}...`;
+        revisarEstadoMetricas(boton, idRepo);
+
+    } catch (error) {
+        document.getElementById("estado-repo-unico").textContent = "⚠️ Error al iniciar.";
+        boton.disabled = false;
+        boton.textContent = "Analizar solo este repo";
+    }
+});
+
+//-----> Revisa /api/metrics/status repetidamente hasta que el proceso
+//-----> termine. Si "idRepo" no es null, es el boton de "un solo repo"
+//-----> el que se reactiva; si es null, es el boton general.
+function revisarEstadoMetricas(botonQueDisparo, idRepo) {
     const intervalo = setInterval(async () => {
         try {
             const respuesta = await fetch(`${URL_API_METRICAS}/api/metrics/status`);
@@ -190,15 +293,25 @@ function revisarEstadoMetricas(boton) {
 
             if (!estado.corriendo) {
                 clearInterval(intervalo);
-                boton.disabled = false;
-                boton.textContent = "Correr análisis de métricas";
-                actualizarEtiquetaEstado("estado-metricas", "Completado", "exito");
+                botonQueDisparo.disabled = false;
+
+                if (idRepo) {
+                    botonQueDisparo.textContent = "Analizar solo este repo";
+                    document.getElementById("estado-repo-unico").textContent =
+                        `✅ Terminado: ${idRepo}`;
+                } else {
+                    botonQueDisparo.textContent = "Correr análisis de métricas";
+                    actualizarEtiquetaEstado("estado-metricas", "Completado", "exito");
+                }
+
+                // Refresca todo lo que pudo haber cambiado
                 cargarMetricas();
+                cargarReposEnProgreso();
             }
         } catch (error) {
             clearInterval(intervalo);
-            boton.disabled = false;
-            boton.textContent = "Correr análisis de métricas";
+            botonQueDisparo.disabled = false;
+            botonQueDisparo.textContent = idRepo ? "Analizar solo este repo" : "Correr análisis de métricas";
             actualizarEtiquetaEstado("estado-metricas", "Error de conexión", "error");
         }
     }, 5000);
@@ -210,3 +323,4 @@ function revisarEstadoMetricas(boton) {
 // =====================================================================
 cargarMineria();
 cargarMetricas();
+cargarReposEnProgreso();

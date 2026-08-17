@@ -22,7 +22,7 @@
     <main class="contenedor-principal">
 
         <!-- ---------------------------------------------- -->
-        <!-- SECCION DE EBER (Minería) - el la va a llenar  -->
+        <!-- SECCION DE EBER (Minería)                      -->
         <!-- ---------------------------------------------- -->
         <section id="seccion-mineria" class="tarjeta">
             <h2>Minería de Repositorios</h2>
@@ -39,10 +39,19 @@
             <div id="contenido-mineria" class="contenido-datos">
                 <p class="texto-ayuda">Cargando datos...</p>
             </div>
+
+            <!-- Eber: aqui puede agregar su lista de repos, reutilizando
+                 el mismo patron de /api/metrics/repos de Tania -->
+            <div class="subseccion">
+                <h3>Lista de repositorios</h3>
+                <div id="lista-repos-mineria" class="contenido-datos contenido-scroll">
+                    <p class="texto-ayuda">Pendiente de implementar</p>
+                </div>
+            </div>
         </section>
 
         <!-- ---------------------------------------------- -->
-        <!-- SECCION DE TANIA (Métricas) - tu la vas a llenar -->
+        <!-- SECCION DE TANIA (Métricas)                    -->
         <!-- ---------------------------------------------- -->
         <section id="seccion-metricas" class="tarjeta">
             <h2>Extracción de Métricas</h2>
@@ -58,6 +67,28 @@
 
             <div id="contenido-metricas" class="contenido-datos">
                 <p class="texto-ayuda">Cargando datos...</p>
+            </div>
+
+            <!-- 🔌 NUEVO: analizar un solo repo -->
+            <div class="controles controles-secundario">
+                <input
+                    type="text"
+                    id="input-repo-unico"
+                    class="campo-texto"
+                    placeholder="owner/nombre-del-repo"
+                >
+                <button id="btn-run-repo-unico" class="boton boton-secundario">
+                    Analizar solo este repo
+                </button>
+            </div>
+            <p id="estado-repo-unico" class="texto-ayuda"></p>
+
+            <!-- 🔌 NUEVO: repos en progreso, con detalle de fase -->
+            <div class="subseccion">
+                <h3>Repos en progreso</h3>
+                <div id="lista-en-progreso" class="contenido-datos contenido-scroll">
+                    <p class="texto-ayuda">Cargando...</p>
+                </div>
             </div>
         </section>
 
