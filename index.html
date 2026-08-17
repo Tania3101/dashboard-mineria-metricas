@@ -31,6 +31,12 @@
                 <button id="btn-run-mineria" class="boton boton-primario">
                     Correr minería
                 </button>
+                <!-- 🔌 NUEVO: boton para refrescar los datos sin correr
+                     un proceso nuevo (util cuando el estado cambio afuera,
+                     ej. reset manual desde el playground de Mongo) -->
+                <button id="btn-refresh-mineria" class="boton boton-secundario">
+                    Actualizar
+                </button>
                 <span id="estado-mineria" class="etiqueta-estado">
                     Sin iniciar
                 </span>
@@ -40,12 +46,12 @@
                 <p class="texto-ayuda">Cargando datos...</p>
             </div>
 
-            <!-- Eber: aqui puede agregar su lista de repos, reutilizando
-                 el mismo patron de /api/metrics/repos de Tania -->
+            <!-- 🔌 NUEVO: lista de repos estilo consola matrix, con 3
+                 columnas (pendientes / completos / fallidos) -->
             <div class="subseccion">
                 <h3>Lista de repositorios</h3>
-                <div id="lista-repos-mineria" class="contenido-datos contenido-scroll">
-                    <p class="texto-ayuda">Pendiente de implementar</p>
+                <div id="lista-repos-mineria" class="consola-matrix contenido-scroll">
+                    <p class="texto-ayuda">Cargando...</p>
                 </div>
             </div>
         </section>
