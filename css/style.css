@@ -195,6 +195,17 @@ body {
 .fila-dato .valor {
     font-weight: 700;
 }
+.fila-dato .valor.exito {
+    color: var(--color-exito);
+}
+
+.fila-dato .valor.error {
+    color: var(--color-error);
+}
+
+.fila-dato .valor.alerta {
+    color: var(--color-alerta);
+}
 
 /* =================================================================
    PIE DE PAGINA

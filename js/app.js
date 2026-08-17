@@ -139,11 +139,10 @@ async function cargarMetricas() {
 
         // 5. Pinta cada status del catalogo como una fila
         const statusRepos = datos.reposPorStatus;
-        contenedor.appendChild(crearFilaDato("Pendientes", statusRepos.pending));
-        contenedor.appendChild(crearFilaDato("En progreso", statusRepos.metrics_in_progress));
-        contenedor.appendChild(crearFilaDato("Completados", statusRepos.metrics_complete));
-        contenedor.appendChild(crearFilaDato("Fallidos", statusRepos.metrics_failed));
-
+       contenedor.appendChild(crearFilaDato("Pendientes", statusRepos.pending));
+contenedor.appendChild(crearFilaDato("En progreso", statusRepos.metrics_in_progress, "alerta"));
+contenedor.appendChild(crearFilaDato("Completados", statusRepos.metrics_complete, "exito"));
+contenedor.appendChild(crearFilaDato("Fallidos", statusRepos.metrics_failed, "error"));
         // 6. Pinta el espacio usado en Mongo
         contenedor.appendChild(
             crearFilaDato("Espacio usado (métricas estáticas)", datos.espacioRepoClassMetricsMB + " MB")
