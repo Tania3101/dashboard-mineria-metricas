@@ -346,6 +346,24 @@ async function cargarReposSoloEstaticos() {
     }
 }
 
+//-----> 🔌 NUEVO: boton para forzar una relectura de Mongo sin recargar la pagina,
+//-----> util cuando otro proceso (ej. tu compañero borrando/reseteando el catalogo
+//-----> compartido) cambio los datos y quieres verlo reflejado de inmediato.
+document.getElementById("btn-actualizar-metricas").addEventListener("click", async () => {
+    const boton = document.getElementById("btn-actualizar-metricas");
+    boton.disabled = true;
+    boton.textContent = "Actualizando...";
+
+    await Promise.all([
+        cargarMetricas(),
+        cargarReposEnProgreso(),
+        cargarReposSoloEstaticos()
+    ]);
+
+    boton.disabled = false;
+    boton.textContent = "Actualizar";
+});
+
 //-----> Boton para disparar /api/metrics/run (TODOS los pendientes)
 document.getElementById("btn-run-metricas").addEventListener("click", async () => {
     const boton = document.getElementById("btn-run-metricas");
