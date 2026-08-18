@@ -307,6 +307,56 @@ body {
 }
 
 /* =================================================================
+   🔌 NUEVO: CONSOLA ESTILO MATRIX (lista de repos de minería)
+   Fondo negro, letras verdes, tipografia monoespaciada, tabla con
+   3 columnas: pendientes / completos / fallidos.
+   ================================================================= */
+.consola-matrix {
+    background-color: #000000;
+    border-radius: 8px;
+    padding: 0.75rem;
+    font-family: "Courier New", Courier, monospace;
+}
+
+.consola-matrix table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.8rem;
+}
+
+.consola-matrix th {
+    position: sticky;
+    top: 0;
+    text-align: left;
+    padding: 0.4rem 0.6rem;
+    background-color: #000000;
+    border-bottom: 1px solid #00ff41;
+    color: #00ff41;
+    text-shadow: 0 0 4px rgba(0, 255, 65, 0.6);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.consola-matrix td {
+    padding: 0.3rem 0.6rem;
+    vertical-align: top;
+    color: #33ff66;
+    word-break: break-all;
+}
+
+.consola-matrix .celda-vacia {
+    padding: 0.6rem;
+    color: #0a5c1f;
+    font-style: italic;
+}
+
+/* Que los mensajes de "cargando" / error tambien se vean verdes
+   dentro de la consola, en vez del gris normal de .texto-ayuda */
+.consola-matrix .texto-ayuda {
+    color: #33ff66;
+}
+
+/* =================================================================
    PIE DE PAGINA
    ================================================================= */
 .pie-pagina {

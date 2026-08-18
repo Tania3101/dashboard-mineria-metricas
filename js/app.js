@@ -82,6 +82,43 @@ function crearFilaRepoSoloEstatico(idRepo, razonSinDatos) {
     return fila;
 }
 
+//-----> 🔌 NUEVO: arma la tabla estilo consola (3 columnas: pendientes /
+//-----> completos / fallidos) a partir de 3 arreglos de nombres de repo.
+//-----> Si una columna tiene menos elementos que las otras, esa celda
+//-----> simplemente queda vacia en esa fila.
+function construirTablaMatrix(pendientes, completos, fallidos) {
+    const filasMax = Math.max(pendientes.length, completos.length, fallidos.length);
+
+    const tabla = document.createElement("table");
+
+    const encabezado = document.createElement("tr");
+    encabezado.innerHTML = `
+        <th>Pendientes</th>
+        <th>Completos</th>
+        <th>Fallidos</th>
+    `;
+    tabla.appendChild(encabezado);
+
+    if (filasMax === 0) {
+        const filaVacia = document.createElement("tr");
+        filaVacia.innerHTML = `<td colspan="3" class="celda-vacia">Sin repositorios todavía.</td>`;
+        tabla.appendChild(filaVacia);
+        return tabla;
+    }
+
+    for (let i = 0; i < filasMax; i++) {
+        const fila = document.createElement("tr");
+        fila.innerHTML = `
+            <td>${pendientes[i] || ""}</td>
+            <td>${completos[i] || ""}</td>
+            <td>${fallidos[i] || ""}</td>
+        `;
+        tabla.appendChild(fila);
+    }
+
+    return tabla;
+}
+
 // =====================================================================
 // SECCION DE EBER: minería de repositorios
 // =====================================================================
@@ -109,6 +146,40 @@ async function cargarMineria() {
     }
 }
 
+//-----> 🔌 NUEVO: trae la lista completa de repos de minería (nombre +
+//-----> status) y arma la tabla estilo consola con las 3 columnas.
+//----->
+//-----> ⚠️ OJO: esto asume que la API de minería tiene un endpoint
+//-----> GET /api/catalog/repos que regresa un arreglo tipo:
+//----->   [{ "_id": "owner/repo", "status": "pending" }, ...]
+//-----> osea el mismo patron que /api/metrics/repos de Tania. Si tu
+//-----> API todavia no tiene ese endpoint, hay que agregarlo primero
+//-----> en tu repo de mining-api (backend), y si el nombre de la ruta
+//-----> o de los campos es distinto, solo ajusta esta funcion.
+async function cargarListaReposMineria() {
+    const contenedor = document.getElementById("lista-repos-mineria");
+
+    try {
+        const respuesta = await fetch(`${URL_API_MINERIA}/api/catalog/repos`);
+
+        if (!respuesta.ok) {
+            throw new Error(`La API respondio con error ${respuesta.status}`);
+        }
+
+        const repos = await respuesta.json();
+
+        const pendientes = repos.filter(r => r.status === "pending").map(r => r._id);
+        const completos   = repos.filter(r => r.status === "complete").map(r => r._id);
+        const fallidos    = repos.filter(r => r.status === "failed").map(r => r._id);
+
+        contenedor.innerHTML = "";
+        contenedor.appendChild(construirTablaMatrix(pendientes, completos, fallidos));
+
+    } catch (error) {
+        mostrarError("lista-repos-mineria", "No se pudo cargar la lista de repositorios.");
+    }
+}
+
 //-----> Boton para disparar /api/mining/run, con polling hasta que termine
 document.getElementById("btn-run-mineria").addEventListener("click", async () => {
     const boton = document.getElementById("btn-run-mineria");
@@ -122,6 +193,15 @@ document.getElementById("btn-run-mineria").addEventListener("click", async () =>
         actualizarEtiquetaEstado("estado-mineria", "Error al iniciar", "error");
         boton.disabled = false;
     }
+});
+
+//-----> 🔌 NUEVO: boton "Actualizar" - vuelve a pedir los datos actuales
+//-----> sin disparar un proceso nuevo. Sirve para cuando el estado de
+//-----> los repos cambio por fuera de la web (ej. reset manual desde
+//-----> el playground de Mongo) y la tarjeta se quedo con datos viejos.
+document.getElementById("btn-refresh-mineria").addEventListener("click", () => {
+    cargarMineria();
+    cargarListaReposMineria();
 });
 
 //-----> Revisa el estado cada 5 segundos hasta que el pipeline termine
@@ -138,6 +218,7 @@ function pollEstadoMineria(boton) {
                 actualizarEtiquetaEstado("estado-mineria", "Completado", "exito");
                 boton.disabled = false;
                 cargarMineria();
+                cargarListaReposMineria();
             } else if (status.startsWith("error")) {
                 clearInterval(intervalo);
                 actualizarEtiquetaEstado("estado-mineria", "Error en el proceso", "error");
@@ -376,6 +457,7 @@ function revisarEstadoMetricas(botonQueDisparo, idRepo) {
 // ARRANQUE: al cargar la pagina, pide los datos de ambas secciones
 // =====================================================================
 cargarMineria();
+cargarListaReposMineria();
 cargarMetricas();
 cargarReposEnProgreso();
 cargarReposSoloEstaticos();
