@@ -28,29 +28,22 @@
             <h2>Minería de Repositorios</h2>
 
             <div class="controles">
-                <button id="btn-run-mineria" class="boton boton-primario">
-                    Correr minería
-                </button>
-                <!-- 🔌 NUEVO: boton para refrescar los datos sin correr
-                     un proceso nuevo (util cuando el estado cambio afuera,
-                     ej. reset manual desde el playground de Mongo) -->
-                <button id="btn-refresh-mineria" class="boton boton-secundario">
-                    Actualizar
-                </button>
-                <span id="estado-mineria" class="etiqueta-estado">
-                    Sin iniciar
-                </span>
+                <button id="btn-run-mineria" class="boton boton-primario">Correr minería</button>
+                <button id="btn-refresh-mineria" class="boton boton-secundario">Actualizar</button>
+                <button id="btn-export-csv" class="boton boton-secundario">Generar CSV</button>
             </div>
 
-            <div id="contenido-mineria" class="contenido-datos">
-                <p class="texto-ayuda">Cargando datos...</p>
+            <div id="progreso-fases" class="contenido-datos">
+                <p class="texto-ayuda">Cargando...</p>
             </div>
 
-            <!-- 🔌 NUEVO: lista de repos estilo consola matrix, con 3
-                 columnas (pendientes / completos / fallidos) -->
+            <div id="banner-completo" style="display:none;" class="etiqueta-estado exito">
+                ✅ Pipeline completo
+            </div>
+
             <div class="subseccion">
-                <h3>Lista de repositorios</h3>
-                <div id="lista-repos-mineria" class="consola-matrix contenido-scroll">
+                <h3>Scoring: Top 5 + repos restantes</h3>
+                <div id="lista-ranking-mineria" class="consola-matrix contenido-scroll">
                     <p class="texto-ayuda">Cargando...</p>
                 </div>
             </div>

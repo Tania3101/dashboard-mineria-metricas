@@ -120,88 +120,97 @@ function construirTablaMatrix(pendientes, completos, fallidos) {
 }
 
 // =====================================================================
-// SECCION DE EBER: minería de repositorios
+// SECCION DE EBER: minería con progreso por fase
 // =====================================================================
-async function cargarMineria() {
-    const contenedor = document.getElementById("contenido-mineria");
+async function cargarProgresoFases() {
+    const contenedor = document.getElementById("progreso-fases");
 
     try {
-        const respuesta = await fetch(`${URL_API_MINERIA}/api/catalog/status`);
-        const datos = await respuesta.json();
+        const res = await fetch(`${URL_API_MINERIA}/api/pipeline/stats`);
+        if (!res.ok) throw new Error("Sin datos de pipeline aún");
+        const stats = await res.json();
 
-        contenedor.innerHTML = "";
-        contenedor.appendChild(crearFilaDato("Pendientes", datos.pending));
-        contenedor.appendChild(crearFilaDato("Completos", datos.complete, "exito"));
-        contenedor.appendChild(crearFilaDato("Fallidos", datos.failed, "error"));
+        contenedor.innerHTML = `
+            <p class="texto-ayuda">${stats.totalAvailable}+ repositorios disponibles</p>
+            ${barraFase("FASE 1", stats.phase1Approved, stats.totalAvailable)}
+            ${barraFase("FASE 2", stats.phase2Approved, stats.phase1Approved)}
+            ${barraFase("FASE 3 — Filtro técnico", stats.phase3Approved, stats.phase2Approved)}
+            <p class="fila-dato">Scoring completado <span class="valor exito">${stats.scoredCount} repos</span></p>
+        `;
 
-        if (datos.pending === 0) {
-            actualizarEtiquetaEstado("estado-mineria", "Todo procesado", "exito");
-        } else {
-            actualizarEtiquetaEstado("estado-mineria", `${datos.pending} pendientes`, "alerta");
+        if (stats.phase3Approved > 0 && stats.scoredCount === stats.phase3Approved) {
+            document.getElementById("banner-completo").style.display = "block";
         }
 
     } catch (error) {
-        mostrarError("contenido-mineria", "No se pudo conectar con la API de minería.");
-        actualizarEtiquetaEstado("estado-mineria", "Error de conexión", "error");
+        contenedor.innerHTML = `<p class="texto-ayuda">Aún no hay una corrida completa del pipeline.</p>`;
     }
 }
 
-//-----> 🔌 NUEVO: trae la lista completa de repos de minería (nombre +
-//-----> status) y arma la tabla estilo consola con las 3 columnas.
-//----->
-//-----> ⚠️ OJO: esto asume que la API de minería tiene un endpoint
-//-----> GET /api/catalog/repos que regresa un arreglo tipo:
-//----->   [{ "_id": "owner/repo", "status": "pending" }, ...]
-//-----> osea el mismo patron que /api/metrics/repos de Tania. Si tu
-//-----> API todavia no tiene ese endpoint, hay que agregarlo primero
-//-----> en tu repo de mining-api (backend), y si el nombre de la ruta
-//-----> o de los campos es distinto, solo ajusta esta funcion.
-async function cargarListaReposMineria() {
-    const contenedor = document.getElementById("lista-repos-mineria");
+function barraFase(nombre, aprobados, base) {
+    const porcentaje = base > 0 ? Math.round((aprobados / base) * 100) : 0;
+    return `
+        <div class="fila-dato">
+            <span>${nombre}: ${aprobados} aprobados</span>
+        </div>
+        <div style="background:var(--color-neutro-fondo); border-radius:8px; height:8px; overflow:hidden; margin-bottom:0.5rem;">
+            <div style="width:${porcentaje}%; background:var(--color-primario); height:100%;"></div>
+        </div>
+    `;
+}
+
+async function cargarRankingMineria() {
+    const contenedor = document.getElementById("lista-ranking-mineria");
 
     try {
-        const respuesta = await fetch(`${URL_API_MINERIA}/api/catalog/repos`);
+        const res = await fetch(`${URL_API_MINERIA}/api/ranking/all`);
+        const repos = await res.json();
 
-        if (!respuesta.ok) {
-            throw new Error(`La API respondio con error ${respuesta.status}`);
-        }
+        const top5 = repos.slice(0, 5);
+        const resto = repos.slice(5);
 
-        const repos = await respuesta.json();
+        let html = "<table><thead><tr><th>Rank</th><th>Repo</th><th>Score</th></tr></thead><tbody>";
 
-        const pendientes = repos.filter(r => r.status === "pending").map(r => r._id);
-        const completos   = repos.filter(r => r.status === "complete").map(r => r._id);
-        const fallidos    = repos.filter(r => r.status === "failed").map(r => r._id);
+        top5.forEach(r => {
+            html += `<tr><td>⭐ #${r.rank}</td><td>${r.fullName}</td><td>${r.totalScore.toFixed(1)}</td></tr>`;
+        });
+        resto.forEach(r => {
+            html += `<tr><td>#${r.rank}</td><td>${r.fullName}</td><td>${r.totalScore.toFixed(1)}</td></tr>`;
+        });
 
-        contenedor.innerHTML = "";
-        contenedor.appendChild(construirTablaMatrix(pendientes, completos, fallidos));
+        html += "</tbody></table>";
+        contenedor.innerHTML = html;
 
     } catch (error) {
-        mostrarError("lista-repos-mineria", "No se pudo cargar la lista de repositorios.");
+        contenedor.innerHTML = `<p class="texto-ayuda">Sin datos de ranking aún.</p>`;
     }
 }
 
-//-----> Boton para disparar /api/mining/run, con polling hasta que termine
+document.getElementById("btn-refresh-mineria").addEventListener("click", () => {
+    cargarProgresoFases();
+    cargarRankingMineria();
+});
+
+document.getElementById("btn-export-csv").addEventListener("click", () => {
+    window.open(`${URL_API_MINERIA}/api/export/csv`, "_blank");
+});
+
+//-----> Boton para disparar /api/mining/run, con polling hasta que termine.
+//-----> El nuevo HTML ya no tiene el span "estado-mineria", asi que el
+//-----> propio boton muestra el estado en su texto mientras corre.
 document.getElementById("btn-run-mineria").addEventListener("click", async () => {
     const boton = document.getElementById("btn-run-mineria");
     boton.disabled = true;
-    actualizarEtiquetaEstado("estado-mineria", "Iniciando...", "alerta");
+    boton.textContent = "Iniciando...";
 
     try {
         await fetch(`${URL_API_MINERIA}/api/mining/run`, { method: "POST" });
+        boton.textContent = "Corriendo...";
         pollEstadoMineria(boton);
     } catch (error) {
-        actualizarEtiquetaEstado("estado-mineria", "Error al iniciar", "error");
+        boton.textContent = "Error al iniciar";
         boton.disabled = false;
     }
-});
-
-//-----> 🔌 NUEVO: boton "Actualizar" - vuelve a pedir los datos actuales
-//-----> sin disparar un proceso nuevo. Sirve para cuando el estado de
-//-----> los repos cambio por fuera de la web (ej. reset manual desde
-//-----> el playground de Mongo) y la tarjeta se quedo con datos viejos.
-document.getElementById("btn-refresh-mineria").addEventListener("click", () => {
-    cargarMineria();
-    cargarListaReposMineria();
 });
 
 //-----> Revisa el estado cada 5 segundos hasta que el pipeline termine
@@ -212,21 +221,21 @@ function pollEstadoMineria(boton) {
             const status = await respuesta.text();
 
             if (status === "running") {
-                actualizarEtiquetaEstado("estado-mineria", "Corriendo...", "alerta");
+                boton.textContent = "Corriendo...";
             } else if (status === "completed") {
                 clearInterval(intervalo);
-                actualizarEtiquetaEstado("estado-mineria", "Completado", "exito");
+                boton.textContent = "Correr minería";
                 boton.disabled = false;
-                cargarMineria();
-                cargarListaReposMineria();
+                cargarProgresoFases();
+                cargarRankingMineria();
             } else if (status.startsWith("error")) {
                 clearInterval(intervalo);
-                actualizarEtiquetaEstado("estado-mineria", "Error en el proceso", "error");
+                boton.textContent = "Error en el proceso";
                 boton.disabled = false;
             }
         } catch (error) {
             clearInterval(intervalo);
-            actualizarEtiquetaEstado("estado-mineria", "Error de conexión", "error");
+            boton.textContent = "Error de conexión";
             boton.disabled = false;
         }
     }, 5000);
@@ -474,8 +483,8 @@ function revisarEstadoMetricas(botonQueDisparo, idRepo) {
 // =====================================================================
 // ARRANQUE: al cargar la pagina, pide los datos de ambas secciones
 // =====================================================================
-cargarMineria();
-cargarListaReposMineria();
+cargarProgresoFases();
+cargarRankingMineria();
 cargarMetricas();
 cargarReposEnProgreso();
 cargarReposSoloEstaticos();
