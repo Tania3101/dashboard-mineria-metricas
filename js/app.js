@@ -289,7 +289,7 @@ async function cargarReposEnProgreso() {
 
         if (enProgreso.length === 0) {
             const p = document.createElement("p");
-            p.className = "texto-ayuda";
+            p.className = "texto-ayuda-vacio";
             p.textContent = "Ningún repo en progreso ahora mismo.";
             contenedor.appendChild(p);
             return;
@@ -417,9 +417,18 @@ const INTENTOS_FALLIDOS_ANTES_DE_RENDIRSE = 3;
 //-----> Revisa /api/metrics/status repetidamente hasta que el proceso termine,
 //-----> mostrando con una ruedita en que fase especifica va (clonando /
 //-----> estatica / benchmarks / cronometro de caminos).
+//-----> 🔌 NUEVO: da sensacion de progreso real (no solo "esta corriendo")
+//-----> mostrando cuanto tiempo lleva el analisis actual.
+function formatoTranscurrido(segundosTotales) {
+    const min = Math.floor(segundosTotales / 60);
+    const seg = segundosTotales % 60;
+    return `${min}m ${String(seg).padStart(2, "0")}s`;
+}
+
 function revisarEstadoMetricas(botonQueDisparo, idRepo) {
     let fallosConsecutivos = 0;
     const elementoEstado = document.getElementById("estado-repo-unico");
+    const inicio = Date.now(); //-----> 🔌 NUEVO: marca de tiempo para el contador
 
     const intervalo = setInterval(async () => {
         try {
@@ -443,9 +452,11 @@ function revisarEstadoMetricas(botonQueDisparo, idRepo) {
                 cargarReposEnProgreso();
                 cargarRepoUnicoSelect();
             } else {
-                //-----> Sigue corriendo: muestra la ruedita + la fase actual
+                //-----> Sigue corriendo: ruedita + fase actual + tiempo transcurrido
+                const transcurrido = formatoTranscurrido(Math.floor((Date.now() - inicio) / 1000));
                 elementoEstado.innerHTML =
-                    `<span class="spinner"></span>${textoFase(estado.faseActual)} (${estado.repoActual || idRepo})`;
+                    `<span class="spinner"></span>${textoFase(estado.faseActual)} ` +
+                    `(${estado.repoActual || idRepo}) · ${transcurrido}`;
             }
         } catch (error) {
             fallosConsecutivos++;

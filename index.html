@@ -55,37 +55,46 @@
         <section id="seccion-metricas" class="tarjeta">
             <h2>Extracción de Métricas</h2>
 
-            <!-- 🔌 NUEVO: botones de exportacion (funcionalidad pendiente) -->
-            <div class="controles">
-                <button id="btn-csv-metricas" class="boton boton-secundario">
-                    CSV de métricas
-                </button>
-                <button id="btn-csv-reporte" class="boton boton-secundario">
-                    CSV Reporte
-                </button>
-            </div>
-
             <div id="contenido-metricas" class="contenido-datos">
                 <p class="texto-ayuda">Cargando datos...</p>
             </div>
 
-            <!-- 🔌 MODIFICADO: antes era un campo de texto libre; ahora es un
-                 selector con la lista de repos que aun faltan por analizar -->
-            <div class="controles controles-secundario">
-                <select id="select-repo-unico" class="campo-texto">
-                    <option value="">Cargando repos pendientes...</option>
-                </select>
-                <button id="btn-run-repo-unico" class="boton boton-primario">
-                    Analizar
-                </button>
+            <!-- 🔌 MODIFICADO: "Analizar" es la accion principal de esta tarjeta,
+                 ahora vive en su propio bloque con titulo, en vez de compartir
+                 fila con los botones de exportar (que son acciones secundarias) -->
+            <div class="subseccion">
+                <h3>Analizar repositorio</h3>
+                <div class="controles">
+                    <select id="select-repo-unico" class="campo-texto">
+                        <option value="">Cargando repos pendientes...</option>
+                    </select>
+                    <button id="btn-run-repo-unico" class="boton boton-primario">
+                        Analizar
+                    </button>
+                </div>
+                <p id="estado-repo-unico" class="texto-ayuda"></p>
             </div>
-            <p id="estado-repo-unico" class="texto-ayuda"></p>
 
             <!-- 🔌 NUEVO: repos en progreso, con detalle de fase -->
             <div class="subseccion">
                 <h3>Repos en progreso</h3>
                 <div id="lista-en-progreso" class="contenido-datos contenido-scroll">
                     <p class="texto-ayuda">Cargando...</p>
+                </div>
+            </div>
+
+            <!-- 🔌 MODIFICADO: los CSV son acciones secundarias de exportacion,
+                 no compiten visualmente con "Analizar" -van al final, mas
+                 discretos, con icono de descarga -->
+            <div class="subseccion">
+                <h3>Exportar</h3>
+                <div class="controles controles-exportar">
+                    <button id="btn-csv-metricas" class="boton boton-secundario boton-exportar">
+                        <span class="icono-descarga">⬇</span> CSV de métricas
+                    </button>
+                    <button id="btn-csv-reporte" class="boton boton-secundario boton-exportar">
+                        <span class="icono-descarga">⬇</span> CSV Reporte
+                    </button>
                 </div>
             </div>
         </section>
