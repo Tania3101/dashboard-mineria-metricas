@@ -357,6 +357,27 @@ body {
 }
 
 /* =================================================================
+   🔌 NUEVO: RUEDITA DE CARGA (spinner), para mostrar junto al texto
+   de fase mientras se analiza un repo (clonando/estatica/benchmarks/
+   caminos). Puramente CSS, sin imagenes ni dependencias externas.
+   ================================================================= */
+.spinner {
+    display: inline-block;
+    width: 13px;
+    height: 13px;
+    border: 2px solid var(--color-borde);
+    border-top-color: var(--color-primario);
+    border-radius: 50%;
+    vertical-align: middle;
+    margin-right: 0.4rem;
+    animation: girar-spinner 0.7s linear infinite;
+}
+
+@keyframes girar-spinner {
+    to { transform: rotate(360deg); }
+}
+
+/* =================================================================
    PIE DE PAGINA
    ================================================================= */
 .pie-pagina {

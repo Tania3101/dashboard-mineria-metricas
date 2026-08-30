@@ -69,19 +69,6 @@ function crearFilaRepoEnProgreso(idRepo, metricsStatus) {
     return fila;
 }
 
-//-----> 🔌 NUEVO: crea la fila visual de un repo "solo estatico completo",
-//-----> mostrando la razon por la que la fase dinamica no genero datos
-function crearFilaRepoSoloEstatico(idRepo, razonSinDatos) {
-    const fila = document.createElement("div");
-    fila.className = "fila-repo";
-
-    fila.innerHTML = `
-        <span class="fila-repo-nombre">${idRepo}</span>
-        <span class="texto-ayuda">${razonSinDatos || "Sin razón registrada."}</span>
-    `;
-    return fila;
-}
-
 //-----> 🔌 NUEVO: arma la tabla estilo consola (3 columnas: pendientes /
 //-----> completos / fallidos) a partir de 3 arreglos de nombres de repo.
 //-----> Si una columna tiene menos elementos que las otras, esa celda
@@ -260,10 +247,10 @@ async function cargarMetricas() {
         contenedor.innerHTML = "";
 
         const statusRepos = datos.reposPorStatus;
-        contenedor.appendChild(crearFilaDato("Pendientes", statusRepos.pending));
-        contenedor.appendChild(crearFilaDato("En progreso", statusRepos.metrics_in_progress, "alerta"));
-        //-----> 🔌 NUEVO: repos con estatica completa pero sin datos dinamicos
-        contenedor.appendChild(crearFilaDato("Solo estáticos", statusRepos.metrics_static_only || 0, "alerta"));
+        //-----> 🔌 MODIFICADO: ya no se muestran "Pendientes", "En progreso" ni
+        //-----> "Solo estáticos" aqui -esa informacion ahora vive en el selector
+        //-----> de "repos pendientes" y en las listas detalladas de abajo-. Solo
+        //-----> quedan los conteos finales (completados/fallidos).
         contenedor.appendChild(crearFilaDato("Completados", statusRepos.metrics_complete, "exito"));
         contenedor.appendChild(crearFilaDato("Fallidos", statusRepos.metrics_failed, "error"));
 
@@ -317,11 +304,12 @@ async function cargarReposEnProgreso() {
     }
 }
 
-//-----> 🔌 NUEVO: carga la lista de repos "solo estatico completo" (la fase
-//-----> estatica termino bien, pero la dinamica no genero datos), con la
-//-----> razon guardada por el backend en metrics.dinamicas.razonSinDatos
-async function cargarReposSoloEstaticos() {
-    const contenedor = document.getElementById("lista-solo-estaticos");
+//-----> 🔌 NUEVO: llena el selector con los repos que aun faltan por
+//-----> analizar (sin "status", o "status":"pending"), para elegir uno de
+//-----> una lista en vez de escribir el owner/nombre a mano -mas facil de
+//-----> usar y evita typos que antes hacian fallar el analisis en silencio.
+async function cargarRepoUnicoSelect() {
+    const select = document.getElementById("select-repo-unico");
 
     try {
         const respuesta = await fetch(`${URL_API_METRICAS}/api/metrics/repos`);
@@ -331,94 +319,50 @@ async function cargarReposSoloEstaticos() {
         }
 
         const repos = await respuesta.json();
-        const soloEstaticos = repos.filter(r => r.status === "metrics_static_only");
+        const pendientes = repos.filter(r => !r.status || r.status === "pending");
 
-        contenedor.innerHTML = "";
+        select.innerHTML = "";
 
-        if (soloEstaticos.length === 0) {
-            const p = document.createElement("p");
-            p.className = "texto-ayuda";
-            p.textContent = "Ningún repo en este estado ahora mismo.";
-            contenedor.appendChild(p);
+        if (pendientes.length === 0) {
+            select.innerHTML = `<option value="">No hay repos pendientes</option>`;
             return;
         }
 
-        soloEstaticos.forEach(repo => {
-            const razon = repo.metrics && repo.metrics.dinamicas
-                ? repo.metrics.dinamicas.razonSinDatos
-                : null;
-            contenedor.appendChild(crearFilaRepoSoloEstatico(repo._id, razon));
+        const opcionInicial = document.createElement("option");
+        opcionInicial.value = "";
+        opcionInicial.textContent = `Selecciona un repo (${pendientes.length} pendientes)`;
+        select.appendChild(opcionInicial);
+
+        pendientes.forEach(repo => {
+            const opcion = document.createElement("option");
+            opcion.value = repo._id;
+            opcion.textContent = repo._id;
+            select.appendChild(opcion);
         });
 
     } catch (error) {
-        mostrarError("lista-solo-estaticos", "No se pudo cargar la lista de repos solo-estáticos.");
+        select.innerHTML = `<option value="">⚠️ No se pudo cargar la lista de repos</option>`;
     }
 }
 
-//-----> 🔌 NUEVO: boton para forzar una relectura de Mongo sin recargar la pagina,
-//-----> util cuando otro proceso (ej. tu compañero borrando/reseteando el catalogo
-//-----> compartido) cambio los datos y quieres verlo reflejado de inmediato.
-document.getElementById("btn-actualizar-metricas").addEventListener("click", async () => {
-    const boton = document.getElementById("btn-actualizar-metricas");
-    boton.disabled = true;
-    boton.textContent = "Actualizando...";
-
-    await Promise.all([
-        cargarMetricas(),
-        cargarReposEnProgreso(),
-        cargarReposSoloEstaticos()
-    ]);
-
-    boton.disabled = false;
-    boton.textContent = "Actualizar";
-});
-
-//-----> Boton para disparar /api/metrics/run (TODOS los pendientes)
-document.getElementById("btn-run-metricas").addEventListener("click", async () => {
-    const boton = document.getElementById("btn-run-metricas");
-
-    try {
-        boton.disabled = true;
-        boton.textContent = "Iniciando...";
-
-        const respuesta = await fetch(`${URL_API_METRICAS}/api/metrics/run`, {
-            method: "POST"
-        });
-
-        if (respuesta.status === 409) {
-            actualizarEtiquetaEstado("estado-metricas", "Ya hay un proceso corriendo", "alerta");
-            boton.disabled = false;
-            boton.textContent = "Correr análisis de métricas";
-            return;
-        }
-
-        actualizarEtiquetaEstado("estado-metricas", "Corriendo...", "alerta");
-        boton.textContent = "Corriendo...";
-
-        revisarEstadoMetricas(boton, null);
-
-    } catch (error) {
-        actualizarEtiquetaEstado("estado-metricas", "Error al iniciar", "error");
-        boton.disabled = false;
-        boton.textContent = "Correr análisis de métricas";
-    }
-});
-
-//-----> 🔌 NUEVO: boton para disparar /api/metrics/run?repo=... (UN repo)
+//-----> 🔌 MODIFICADO: boton para disparar /api/metrics/run?repo=... para el
+//-----> repo elegido en el selector -antes leia de un input de texto libre,
+//-----> ahora lee del <select> lleno con los repos pendientes reales.
 document.getElementById("btn-run-repo-unico").addEventListener("click", async () => {
     const boton = document.getElementById("btn-run-repo-unico");
-    const input = document.getElementById("input-repo-unico");
-    const idRepo = input.value.trim();
+    const select = document.getElementById("select-repo-unico");
+    const idRepo = select.value;
+    const elementoEstado = document.getElementById("estado-repo-unico");
 
     if (idRepo === "") {
-        actualizarEtiquetaEstado("estado-repo-unico", "Escribe el nombre del repo (owner/nombre)", "alerta");
+        elementoEstado.textContent = "Selecciona un repo de la lista.";
         return;
     }
 
     try {
         boton.disabled = true;
         boton.textContent = "Iniciando...";
-        document.getElementById("estado-repo-unico").textContent = "";
+        elementoEstado.innerHTML = `<span class="spinner"></span>Iniciando...`;
 
         const respuesta = await fetch(
             `${URL_API_METRICAS}/api/metrics/run?repo=${encodeURIComponent(idRepo)}`,
@@ -426,55 +370,97 @@ document.getElementById("btn-run-repo-unico").addEventListener("click", async ()
         );
 
         if (respuesta.status === 409) {
-            document.getElementById("estado-repo-unico").textContent =
-                "⚠️ Ya hay un proceso corriendo, espera a que termine.";
+            elementoEstado.textContent = "⚠️ Ya hay un proceso corriendo, espera a que termine.";
             boton.disabled = false;
-            boton.textContent = "Analizar solo este repo";
+            boton.textContent = "Analizar";
             return;
         }
 
-        document.getElementById("estado-repo-unico").textContent = `Corriendo análisis de: ${idRepo}...`;
+        elementoEstado.innerHTML = `<span class="spinner"></span>Iniciando análisis de: ${idRepo}...`;
         revisarEstadoMetricas(boton, idRepo);
 
     } catch (error) {
-        document.getElementById("estado-repo-unico").textContent = "⚠️ Error al iniciar.";
+        elementoEstado.textContent = "⚠️ Error al iniciar.";
         boton.disabled = false;
-        boton.textContent = "Analizar solo este repo";
+        boton.textContent = "Analizar";
     }
 });
 
-//-----> Revisa /api/metrics/status repetidamente hasta que el proceso
-//-----> termine. Si "idRepo" no es null, es el boton de "un solo repo"
-//-----> el que se reactiva; si es null, es el boton general.
+//-----> 🔌 NUEVO: traduce el codigo de fase que manda /api/metrics/status
+//-----> (ver almacenamiento.EstadoAnalisis del backend) a un texto legible.
+function textoFase(fase) {
+    switch (fase) {
+        case "clonando":
+            return "Clonando repositorio...";
+        case "estatica":
+            return "Analizando estática...";
+        case "dinamica":
+            return "Preparando análisis dinámico...";
+        case "dinamica_benchmarks":
+            return "Corriendo benchmarks (Fase 1)...";
+        case "dinamica_caminos":
+            return "Cronómetro de caminos (Fase 2)...";
+        default:
+            return "Corriendo...";
+    }
+}
+
+//-----> 🔌 MODIFICADO: antes un solo hipo de red (timeout puntual, respuesta
+//-----> lenta mientras el servidor esta ocupado compilando/corriendo JMH)
+//-----> hacia clearInterval() de inmediato y mostraba "Error de conexión",
+//-----> aunque el analisis siguiera corriendo bien del lado del servidor. Ahora
+//-----> solo se da por vencido despues de varios fallos SEGUIDOS -un exito de
+//-----> por medio reinicia el contador-, para tolerar hipos pasajeros sin
+//-----> dejar de detectar un problema real y sostenido.
+const INTENTOS_FALLIDOS_ANTES_DE_RENDIRSE = 3;
+
+//-----> Revisa /api/metrics/status repetidamente hasta que el proceso termine,
+//-----> mostrando con una ruedita en que fase especifica va (clonando /
+//-----> estatica / benchmarks / cronometro de caminos).
 function revisarEstadoMetricas(botonQueDisparo, idRepo) {
+    let fallosConsecutivos = 0;
+    const elementoEstado = document.getElementById("estado-repo-unico");
+
     const intervalo = setInterval(async () => {
         try {
             const respuesta = await fetch(`${URL_API_METRICAS}/api/metrics/status`);
+            if (!respuesta.ok) {
+                throw new Error(`HTTP ${respuesta.status}`);
+            }
             const estado = await respuesta.json();
+
+            //-----> Una respuesta exitosa reinicia el contador de fallos
+            fallosConsecutivos = 0;
 
             if (!estado.corriendo) {
                 clearInterval(intervalo);
                 botonQueDisparo.disabled = false;
-
-                if (idRepo) {
-                    botonQueDisparo.textContent = "Analizar solo este repo";
-                    document.getElementById("estado-repo-unico").textContent =
-                        `✅ Terminado: ${idRepo}`;
-                } else {
-                    botonQueDisparo.textContent = "Correr análisis de métricas";
-                    actualizarEtiquetaEstado("estado-metricas", "Completado", "exito");
-                }
+                botonQueDisparo.textContent = "Analizar";
+                elementoEstado.textContent = `✅ Terminado: ${idRepo}`;
 
                 // Refresca todo lo que pudo haber cambiado
                 cargarMetricas();
                 cargarReposEnProgreso();
-                cargarReposSoloEstaticos();
+                cargarRepoUnicoSelect();
+            } else {
+                //-----> Sigue corriendo: muestra la ruedita + la fase actual
+                elementoEstado.innerHTML =
+                    `<span class="spinner"></span>${textoFase(estado.faseActual)} (${estado.repoActual || idRepo})`;
             }
         } catch (error) {
+            fallosConsecutivos++;
+
+            if (fallosConsecutivos < INTENTOS_FALLIDOS_ANTES_DE_RENDIRSE) {
+                //-----> Hipo pasajero: se avisa sin detener el polling
+                elementoEstado.innerHTML = `<span class="spinner"></span>Reintentando conexión...`;
+                return;
+            }
+
+            //-----> Varios fallos seguidos: aqui si se asume un problema real
             clearInterval(intervalo);
             botonQueDisparo.disabled = false;
-            botonQueDisparo.textContent = idRepo ? "Analizar solo este repo" : "Correr análisis de métricas";
-            actualizarEtiquetaEstado("estado-metricas", "Error de conexión", "error");
+            botonQueDisparo.textContent = "Analizar";
+            elementoEstado.textContent = "⚠️ Error de conexión";
         }
     }, 5000);
 }
@@ -487,4 +473,4 @@ cargarProgresoFases();
 cargarRankingMineria();
 cargarMetricas();
 cargarReposEnProgreso();
-cargarReposSoloEstaticos();
+cargarRepoUnicoSelect();

@@ -55,33 +55,28 @@
         <section id="seccion-metricas" class="tarjeta">
             <h2>Extracción de Métricas</h2>
 
+            <!-- 🔌 NUEVO: botones de exportacion (funcionalidad pendiente) -->
             <div class="controles">
-                <button id="btn-run-metricas" class="boton boton-primario">
-                    Correr análisis de métricas
+                <button id="btn-csv-metricas" class="boton boton-secundario">
+                    CSV de métricas
                 </button>
-                <!-- 🔌 NUEVO: fuerza una relectura de Mongo sin recargar toda la pagina -->
-                <button id="btn-actualizar-metricas" class="boton boton-secundario">
-                    Actualizar
+                <button id="btn-csv-reporte" class="boton boton-secundario">
+                    CSV Reporte
                 </button>
-                <span id="estado-metricas" class="etiqueta-estado">
-                    Sin iniciar
-                </span>
             </div>
 
             <div id="contenido-metricas" class="contenido-datos">
                 <p class="texto-ayuda">Cargando datos...</p>
             </div>
 
-            <!-- 🔌 NUEVO: analizar un solo repo -->
+            <!-- 🔌 MODIFICADO: antes era un campo de texto libre; ahora es un
+                 selector con la lista de repos que aun faltan por analizar -->
             <div class="controles controles-secundario">
-                <input
-                    type="text"
-                    id="input-repo-unico"
-                    class="campo-texto"
-                    placeholder="owner/nombre-del-repo"
-                >
-                <button id="btn-run-repo-unico" class="boton boton-secundario">
-                    Analizar solo este repo
+                <select id="select-repo-unico" class="campo-texto">
+                    <option value="">Cargando repos pendientes...</option>
+                </select>
+                <button id="btn-run-repo-unico" class="boton boton-primario">
+                    Analizar
                 </button>
             </div>
             <p id="estado-repo-unico" class="texto-ayuda"></p>
@@ -90,14 +85,6 @@
             <div class="subseccion">
                 <h3>Repos en progreso</h3>
                 <div id="lista-en-progreso" class="contenido-datos contenido-scroll">
-                    <p class="texto-ayuda">Cargando...</p>
-                </div>
-            </div>
-
-            <!-- 🔌 NUEVO: repos con estatica completa pero sin datos dinamicos -->
-            <div class="subseccion">
-                <h3>Repos solo con estática completa</h3>
-                <div id="lista-solo-estaticos" class="contenido-datos contenido-scroll">
                     <p class="texto-ayuda">Cargando...</p>
                 </div>
             </div>
