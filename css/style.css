@@ -367,3 +367,32 @@ body {
     color: var(--color-texto-secundario);
     font-size: 0.8rem;
 }
+/* =================================================================
+   🔌 NUEVO: bloque de fases acumuladas (estatica/benchmarks/caminos)
+   que se muestra al analizar un repo. Cada fase se queda fija en
+   pantalla con su icono: spinner mientras corre, palomita si
+   termino bien, equis si fallo u omitio.
+   ================================================================= */
+.fases-analisis {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+    margin-top: 0.6rem;
+}
+
+.fila-fase {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 0.85rem;
+}
+
+.icono-fase-ok {
+    color: var(--color-exito);
+    font-weight: 700;
+}
+
+.icono-fase-error {
+    color: var(--color-error);
+    font-weight: 700;
+}

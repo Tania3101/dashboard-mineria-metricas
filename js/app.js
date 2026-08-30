@@ -220,15 +220,9 @@ async function cargarMetricas() {
         contenedor.innerHTML = "";
 
         const statusRepos = datos.reposPorStatus;
-        //-----> 🔌 MODIFICADO: ya no se muestran "Pendientes", "En progreso" ni
-        //-----> "Solo estáticos" aqui -esa informacion ahora vive en el selector
-        //-----> de "repos pendientes" y en las listas detalladas de abajo-. Solo
-        //-----> quedan los conteos finales (completados/fallidos).
         contenedor.appendChild(crearFilaDato("Completados", statusRepos.metrics_complete, "exito"));
         contenedor.appendChild(crearFilaDato("Fallidos", statusRepos.metrics_failed, "error"));
 
-        // 🔌 NUEVO: suma los 3 pedazos de espacio en vez de mostrar solo
-        // el de metricas estaticas
         const espacioTotalMB =
             (datos.espacioRepoCatalogMB || 0) +
             (datos.espacioRepoClassMetricsMB || 0) +
@@ -243,10 +237,7 @@ async function cargarMetricas() {
     }
 }
 
-//-----> 🔌 NUEVO: llena el selector con los repos que aun faltan por
-//-----> analizar (sin "status", o "status":"pending"), para elegir uno de
-//-----> una lista en vez de escribir el owner/nombre a mano -mas facil de
-//-----> usar y evita typos que antes hacian fallar el analisis en silencio.
+//-----> Llena el selector con los repos que aun faltan por analizar
 async function cargarRepoUnicoSelect() {
     const select = document.getElementById("select-repo-unico");
 
@@ -284,9 +275,7 @@ async function cargarRepoUnicoSelect() {
     }
 }
 
-//-----> 🔌 MODIFICADO: boton para disparar /api/metrics/run?repo=... para el
-//-----> repo elegido en el selector -antes leia de un input de texto libre,
-//-----> ahora lee del <select> lleno con los repos pendientes reales.
+//-----> Boton para disparar /api/metrics/run?repo=... para el repo elegido
 document.getElementById("btn-run-repo-unico").addEventListener("click", async () => {
     const boton = document.getElementById("btn-run-repo-unico");
     const select = document.getElementById("select-repo-unico");
@@ -297,6 +286,9 @@ document.getElementById("btn-run-repo-unico").addEventListener("click", async ()
         elementoEstado.textContent = "Selecciona un repo de la lista.";
         return;
     }
+
+    //-----> 🔌 NUEVO: limpia las fases del analisis anterior antes de arrancar uno nuevo
+    document.getElementById("fases-repo-unico").innerHTML = "";
 
     try {
         boton.disabled = true;
@@ -325,49 +317,68 @@ document.getElementById("btn-run-repo-unico").addEventListener("click", async ()
     }
 });
 
-//-----> 🔌 NUEVO: traduce el codigo de fase que manda /api/metrics/status
-//-----> (ver almacenamiento.EstadoAnalisis del backend) a un texto legible.
-function textoFase(fase) {
-    switch (fase) {
-        case "clonando":
-            return "Clonando repositorio...";
-        case "estatica":
-            return "Analizando estática...";
-        case "dinamica":
-            return "Preparando análisis dinámico...";
-        case "dinamica_benchmarks":
-            return "Corriendo benchmarks (Fase 1)...";
-        case "dinamica_caminos":
-            return "Cronómetro de caminos (Fase 2)...";
-        default:
-            return "Corriendo...";
-    }
+//-----> 🔌 NUEVO: nombres legibles para cada fase que manda el backend
+const NOMBRES_FASE = {
+    estatica: "Métricas estáticas",
+    benchmarks: "Benchmarks",
+    caminos: "Cronómetro de caminos"
+};
+
+//-----> 🔌 NUEVO: pinta la lista de fases; cada una se queda fija en pantalla
+//-----> con spinner mientras corre, palomita si termino bien, o equis si
+//-----> fallo / se omitio (por ejemplo si benchmarks fallo y caminos nunca corrio).
+function renderizarFases(fases) {
+    const contenedor = document.getElementById("fases-repo-unico");
+    contenedor.innerHTML = "";
+
+    fases.forEach(fase => {
+        //-----> Las que ni siquiera han arrancado no se muestran todavia
+        if (fase.estado === "pendiente") return;
+
+        const fila = document.createElement("div");
+        fila.className = "fila-fase";
+
+        let icono = "";
+        let mensajeExtra = "";
+
+        switch (fase.estado) {
+            case "en_progreso":
+                icono = `<span class="spinner"></span>`;
+                break;
+            case "completada":
+                icono = `<span class="icono-fase-ok">✓</span>`;
+                break;
+            case "fallida":
+                icono = `<span class="icono-fase-error">✗</span>`;
+                mensajeExtra = " — revisa el CSV de incidencias";
+                break;
+            case "omitida":
+                icono = `<span class="icono-fase-error">✗</span>`;
+                mensajeExtra = " — no se ejecutó, revisa el CSV de incidencias";
+                break;
+        }
+
+        fila.innerHTML = `${icono}<span>${NOMBRES_FASE[fase.nombre] || fase.nombre}${mensajeExtra}</span>`;
+        contenedor.appendChild(fila);
+    });
 }
 
-//-----> 🔌 MODIFICADO: antes un solo hipo de red (timeout puntual, respuesta
-//-----> lenta mientras el servidor esta ocupado compilando/corriendo JMH)
-//-----> hacia clearInterval() de inmediato y mostraba "Error de conexión",
-//-----> aunque el analisis siguiera corriendo bien del lado del servidor. Ahora
-//-----> solo se da por vencido despues de varios fallos SEGUIDOS -un exito de
-//-----> por medio reinicia el contador-, para tolerar hipos pasajeros sin
-//-----> dejar de detectar un problema real y sostenido.
+//-----> Antes un solo hipo de red hacia clearInterval() de inmediato; ahora
+//-----> solo se da por vencido despues de varios fallos SEGUIDOS.
 const INTENTOS_FALLIDOS_ANTES_DE_RENDIRSE = 3;
 
-//-----> Revisa /api/metrics/status repetidamente hasta que el proceso termine,
-//-----> mostrando con una ruedita en que fase especifica va (clonando /
-//-----> estatica / benchmarks / cronometro de caminos).
-//-----> 🔌 NUEVO: da sensacion de progreso real (no solo "esta corriendo")
-//-----> mostrando cuanto tiempo lleva el analisis actual.
+//-----> Da sensacion de progreso real mostrando cuanto tiempo lleva el analisis
 function formatoTranscurrido(segundosTotales) {
     const min = Math.floor(segundosTotales / 60);
     const seg = segundosTotales % 60;
     return `${min}m ${String(seg).padStart(2, "0")}s`;
 }
 
+//-----> Revisa /api/metrics/status repetidamente hasta que el proceso termine
 function revisarEstadoMetricas(botonQueDisparo, idRepo) {
     let fallosConsecutivos = 0;
     const elementoEstado = document.getElementById("estado-repo-unico");
-    const inicio = Date.now(); //-----> 🔌 NUEVO: marca de tiempo para el contador
+    const inicio = Date.now();
 
     const intervalo = setInterval(async () => {
         try {
@@ -380,32 +391,32 @@ function revisarEstadoMetricas(botonQueDisparo, idRepo) {
             //-----> Una respuesta exitosa reinicia el contador de fallos
             fallosConsecutivos = 0;
 
+            //-----> 🔌 NUEVO: pinta el progreso por fase, siempre con lo mas reciente
+            renderizarFases(estado.fases || []);
+
             if (!estado.corriendo) {
                 clearInterval(intervalo);
                 botonQueDisparo.disabled = false;
                 botonQueDisparo.textContent = "Analizar";
                 elementoEstado.textContent = `✅ Terminado: ${idRepo}`;
 
-                // Refresca todo lo que pudo haber cambiado
                 cargarMetricas();
                 cargarRepoUnicoSelect();
             } else {
-                //-----> Sigue corriendo: ruedita + fase actual + tiempo transcurrido
+                //-----> 🔌 MODIFICADO: el detalle de fase ahora vive en renderizarFases(),
+                //-----> aqui solo queda el mensaje generico + contador de tiempo
                 const transcurrido = formatoTranscurrido(Math.floor((Date.now() - inicio) / 1000));
                 elementoEstado.innerHTML =
-                    `<span class="spinner"></span>${textoFase(estado.faseActual)} ` +
-                    `(${estado.repoActual || idRepo}) · ${transcurrido}`;
+                    `<span class="spinner"></span>Corriendo análisis de ${idRepo} · ${transcurrido}`;
             }
         } catch (error) {
             fallosConsecutivos++;
 
             if (fallosConsecutivos < INTENTOS_FALLIDOS_ANTES_DE_RENDIRSE) {
-                //-----> Hipo pasajero: se avisa sin detener el polling
                 elementoEstado.innerHTML = `<span class="spinner"></span>Reintentando conexión...`;
                 return;
             }
 
-            //-----> Varios fallos seguidos: aqui si se asume un problema real
             clearInterval(intervalo);
             botonQueDisparo.disabled = false;
             botonQueDisparo.textContent = "Analizar";

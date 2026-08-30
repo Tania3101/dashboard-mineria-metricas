@@ -59,9 +59,6 @@
                 <p class="texto-ayuda">Cargando datos...</p>
             </div>
 
-            <!-- 🔌 MODIFICADO: "Analizar" es la accion principal de esta tarjeta,
-                 ahora vive en su propio bloque con titulo, en vez de compartir
-                 fila con los botones de exportar (que son acciones secundarias) -->
             <div class="subseccion">
                 <h3>Analizar repositorio</h3>
                 <div class="controles">
@@ -73,17 +70,13 @@
                     </button>
                 </div>
                 <p id="estado-repo-unico" class="texto-ayuda"></p>
+
+                <!-- 🔌 NUEVO: aqui se apilan las fases (estatica/benchmarks/caminos)
+                     con su icono (spinner, palomita o equis), cada una se queda
+                     fija en pantalla mientras dura el analisis -->
+                <div id="fases-repo-unico" class="fases-analisis"></div>
             </div>
 
-            <!-- 🔌 MODIFICADO: se quita la subseccion "Repos en progreso" -era
-                 redundante con el letrero de estado que ya aparece justo debajo
-                 del selector (estado-repo-unico) mientras un repo se analiza -->
-
-            <!-- 🔌 MODIFICADO: los CSV son acciones secundarias de exportacion,
-                 no compiten visualmente con "Analizar" -van al final, mas
-                 discretos, con icono de descarga. "CSV Reporte" se renombro a
-                 "CSV de incidencias" para que el nombre diga lo que hace: lista
-                 los repos que fallaron o se quedaron solo en estatica, y por que -->
             <div class="subseccion">
                 <h3>Exportar</h3>
                 <div class="controles controles-exportar">
