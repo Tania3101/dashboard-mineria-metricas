@@ -257,47 +257,6 @@ body {
     overflow-y: auto;
 }
 
-/* Fila de un repo individual, con nombre + badges de fase */
-.fila-repo {
-    display: flex;
-    flex-direction: column;
-    gap: 0.4rem;
-    padding: 0.6rem 0.75rem;
-    background-color: var(--color-fondo);
-    border-radius: 8px;
-    font-size: 0.85rem;
-}
-
-.fila-repo-nombre {
-    font-weight: 600;
-    word-break: break-all;
-}
-
-.fila-repo-badges {
-    display: flex;
-    gap: 0.5rem;
-    flex-wrap: wrap;
-}
-
-.badge-fase {
-    font-size: 0.75rem;
-    font-weight: 600;
-    padding: 0.2rem 0.55rem;
-    border-radius: 999px;
-    background-color: var(--color-neutro-fondo);
-    color: var(--color-neutro);
-}
-
-.badge-fase.exito {
-    background-color: var(--color-exito-fondo);
-    color: var(--color-exito);
-}
-
-.badge-fase.alerta {
-    background-color: var(--color-alerta-fondo);
-    color: var(--color-alerta);
-}
-
 /* =================================================================
    🔌 NUEVO: CONSOLA ESTILO MATRIX (lista de repos de minería)
    Fondo negro, letras verdes, tipografia monoespaciada, tabla con

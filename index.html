@@ -75,17 +75,15 @@
                 <p id="estado-repo-unico" class="texto-ayuda"></p>
             </div>
 
-            <!-- 🔌 NUEVO: repos en progreso, con detalle de fase -->
-            <div class="subseccion">
-                <h3>Repos en progreso</h3>
-                <div id="lista-en-progreso" class="contenido-datos contenido-scroll">
-                    <p class="texto-ayuda">Cargando...</p>
-                </div>
-            </div>
+            <!-- 🔌 MODIFICADO: se quita la subseccion "Repos en progreso" -era
+                 redundante con el letrero de estado que ya aparece justo debajo
+                 del selector (estado-repo-unico) mientras un repo se analiza -->
 
             <!-- 🔌 MODIFICADO: los CSV son acciones secundarias de exportacion,
                  no compiten visualmente con "Analizar" -van al final, mas
-                 discretos, con icono de descarga -->
+                 discretos, con icono de descarga. "CSV Reporte" se renombro a
+                 "CSV de incidencias" para que el nombre diga lo que hace: lista
+                 los repos que fallaron o se quedaron solo en estatica, y por que -->
             <div class="subseccion">
                 <h3>Exportar</h3>
                 <div class="controles controles-exportar">
@@ -93,7 +91,7 @@
                         <span class="icono-descarga">⬇</span> CSV de métricas
                     </button>
                     <button id="btn-csv-reporte" class="boton boton-secundario boton-exportar">
-                        <span class="icono-descarga">⬇</span> CSV Reporte
+                        <span class="icono-descarga">⬇</span> CSV de incidencias
                     </button>
                 </div>
             </div>

@@ -41,33 +41,6 @@ function mostrarError(idContenedor, mensaje) {
     contenedor.appendChild(p);
 }
 
-//-----> 🔌 NUEVO: convierte un valor de metricsStatus ("pending",
-//-----> "complete", o ausente) en una palabra + color legibles
-function traducirFaseStatus(valor) {
-    if (valor === "complete") return { texto: "Completa", tipo: "exito" };
-    if (valor === "pending") return { texto: "Pendiente", tipo: "alerta" };
-    return { texto: "Sin iniciar", tipo: "" };
-}
-
-//-----> 🔌 NUEVO: crea la fila visual de un repo en progreso, mostrando
-//-----> por separado como va su fase estatica y su fase dinamica
-function crearFilaRepoEnProgreso(idRepo, metricsStatus) {
-    const fila = document.createElement("div");
-    fila.className = "fila-repo";
-
-    const status = metricsStatus || {};
-    const estatica = traducirFaseStatus(status.static);
-    const dinamica = traducirFaseStatus(status.dynamic);
-
-    fila.innerHTML = `
-        <span class="fila-repo-nombre">${idRepo}</span>
-        <span class="fila-repo-badges">
-            <span class="badge-fase ${estatica.tipo}">Estática: ${estatica.texto}</span>
-            <span class="badge-fase ${dinamica.tipo}">Dinámica: ${dinamica.texto}</span>
-        </span>
-    `;
-    return fila;
-}
 
 //-----> 🔌 NUEVO: arma la tabla estilo consola (3 columnas: pendientes /
 //-----> completos / fallidos) a partir de 3 arreglos de nombres de repo.
@@ -270,40 +243,6 @@ async function cargarMetricas() {
     }
 }
 
-//-----> 🔌 NUEVO: carga la lista de repos "en progreso" con el detalle
-//-----> de en que fase van (estatica/dinamica)
-async function cargarReposEnProgreso() {
-    const contenedor = document.getElementById("lista-en-progreso");
-
-    try {
-        const respuesta = await fetch(`${URL_API_METRICAS}/api/metrics/repos`);
-
-        if (!respuesta.ok) {
-            throw new Error(`La API respondio con error ${respuesta.status}`);
-        }
-
-        const repos = await respuesta.json();
-        const enProgreso = repos.filter(r => r.status === "metrics_in_progress");
-
-        contenedor.innerHTML = "";
-
-        if (enProgreso.length === 0) {
-            const p = document.createElement("p");
-            p.className = "texto-ayuda-vacio";
-            p.textContent = "Ningún repo en progreso ahora mismo.";
-            contenedor.appendChild(p);
-            return;
-        }
-
-        enProgreso.forEach(repo => {
-            contenedor.appendChild(crearFilaRepoEnProgreso(repo._id, repo.metricsStatus));
-        });
-
-    } catch (error) {
-        mostrarError("lista-en-progreso", "No se pudo cargar la lista de repos en progreso.");
-    }
-}
-
 //-----> 🔌 NUEVO: llena el selector con los repos que aun faltan por
 //-----> analizar (sin "status", o "status":"pending"), para elegir uno de
 //-----> una lista en vez de escribir el owner/nombre a mano -mas facil de
@@ -449,7 +388,6 @@ function revisarEstadoMetricas(botonQueDisparo, idRepo) {
 
                 // Refresca todo lo que pudo haber cambiado
                 cargarMetricas();
-                cargarReposEnProgreso();
                 cargarRepoUnicoSelect();
             } else {
                 //-----> Sigue corriendo: ruedita + fase actual + tiempo transcurrido
@@ -483,5 +421,4 @@ function revisarEstadoMetricas(botonQueDisparo, idRepo) {
 cargarProgresoFases();
 cargarRankingMineria();
 cargarMetricas();
-cargarReposEnProgreso();
 cargarRepoUnicoSelect();
