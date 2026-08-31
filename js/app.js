@@ -364,12 +364,11 @@ function renderizarFases(fases) {
     });
 }
 
-//-----> 🔌 MODIFICADO: el servidor puede tardar ~30-40s en reiniciarse cuando
-//-----> el proceso murio por falta de memoria. Con un valor bajo, el frontend
-//-----> se rendia ANTES de que el servidor volviera, mostrando "Error de
-//-----> conexión" de forma prematura y perdiendo la oportunidad de mostrar
-//-----> el resultado real (fallido) una vez el servidor arriba de nuevo.
-const INTENTOS_FALLIDOS_ANTES_DE_RENDIRSE = 12; // 12 x 5s = 60s de margen
+//-----> 🔌 MODIFICADO: el servidor puede tardar varios minutos en reiniciarse
+//-----> cuando el proceso murio por falta de memoria y ademas hay que recompilar
+//-----> un proyecto pesado. Se sube a un margen bastante mas generoso (5 min)
+//-----> para no rendirse antes de que el servidor vuelva a responder.
+const INTENTOS_FALLIDOS_ANTES_DE_RENDIRSE = 60; // 60 x 5s = 5 minutos de margen
 
 //-----> Da sensacion de progreso real mostrando cuanto tiempo lleva el analisis
 function formatoTranscurrido(segundosTotales) {
@@ -378,11 +377,15 @@ function formatoTranscurrido(segundosTotales) {
     return `${min}m ${String(seg).padStart(2, "0")}s`;
 }
 
-//-----> Revisa /api/metrics/status repetidamente hasta que el proceso termine
-function revisarEstadoMetricas(botonQueDisparo, idRepo) {
+//-----> Revisa /api/metrics/status repetidamente hasta que el proceso termine.
+//-----> 🔌 MODIFICADO: ahora recibe el momento de inicio como parametro opcional,
+//-----> para que al retomar un analisis que ya estaba corriendo desde antes de
+//-----> recargar la pagina (ver revisarAlCargarPagina), el contador de tiempo
+//-----> no se reinicie desde 0 en la pantalla.
+function revisarEstadoMetricas(botonQueDisparo, idRepo, inicio) {
     let fallosConsecutivos = 0;
     const elementoEstado = document.getElementById("estado-repo-unico");
-    const inicio = Date.now();
+    const momentoInicio = inicio || Date.now();
 
     const intervalo = setInterval(async () => {
         try {
@@ -403,10 +406,10 @@ function revisarEstadoMetricas(botonQueDisparo, idRepo) {
                 botonQueDisparo.disabled = false;
                 botonQueDisparo.textContent = "Analizar";
 
-                //-----> 🔌 NUEVO: corriendo=false no siempre significa exito -
-                //-----> tambien pasa cuando el servidor se reinicio a medias y
-                //-----> el backend marco el repo como fallido. Se revisan las
-                //-----> fases antes de decidir el mensaje final.
+                //-----> corriendo=false no siempre significa exito - tambien pasa
+                //-----> cuando el servidor se reinicio a medias y el backend marco
+                //-----> el repo como fallido. Se revisan las fases antes de decidir
+                //-----> el mensaje final.
                 const huboFalla = fases.some(f => f.estado === "fallida" || f.estado === "omitida");
 
                 if (huboFalla) {
@@ -418,7 +421,7 @@ function revisarEstadoMetricas(botonQueDisparo, idRepo) {
                 cargarMetricas();
                 cargarRepoUnicoSelect();
             } else {
-                const transcurrido = formatoTranscurrido(Math.floor((Date.now() - inicio) / 1000));
+                const transcurrido = formatoTranscurrido(Math.floor((Date.now() - momentoInicio) / 1000));
                 elementoEstado.innerHTML =
                     `<span class="spinner"></span>Corriendo análisis de ${idRepo} · ${transcurrido}`;
             }
@@ -426,8 +429,6 @@ function revisarEstadoMetricas(botonQueDisparo, idRepo) {
             fallosConsecutivos++;
 
             if (fallosConsecutivos < INTENTOS_FALLIDOS_ANTES_DE_RENDIRSE) {
-                //-----> 🔌 MODIFICADO: mensaje mas claro de que puede ser un
-                //-----> reinicio del servidor, no solo un hipo de red comun
                 elementoEstado.innerHTML = `<span class="spinner"></span>Reintentando conexión (el servidor pudo haberse reiniciado)...`;
                 return;
             }
@@ -440,6 +441,55 @@ function revisarEstadoMetricas(botonQueDisparo, idRepo) {
     }, 5000);
 }
 
+//-----> 🔌 NUEVO: al cargar la pagina (o recargarla), pregunta de una vez el
+//-----> estado real del servidor -sin esperar a que el usuario de clic en
+//-----> "Analizar"-. Cubre 2 casos: (1) el analisis sigue corriendo del lado
+//-----> del servidor y la pagina se recargo o el navegador se rindio antes de
+//-----> tiempo -aqui se retoma el polling automaticamente-, y (2) el ultimo
+//-----> analisis ya termino (bien o mal) y el usuario nunca vio el resultado
+//-----> final porque no estaba viendo la pantalla en ese momento.
+async function revisarAlCargarPagina() {
+    const boton = document.getElementById("btn-run-repo-unico");
+    const elementoEstado = document.getElementById("estado-repo-unico");
+
+    try {
+        const respuesta = await fetch(`${URL_API_METRICAS}/api/metrics/status`);
+        if (!respuesta.ok) return;
+
+        const estado = await respuesta.json();
+        const fases = estado.fases || [];
+
+        //-----> Si no hay ninguna fase registrada, nunca ha corrido nada
+        //-----> todavia -no hay nada que mostrar-.
+        if (fases.length === 0) return;
+
+        renderizarFases(fases);
+
+        const idRepo = estado.repoActual || "el repo";
+
+        if (estado.corriendo) {
+            //-----> Sigue corriendo del lado del servidor: retoma el polling
+            //-----> como si el usuario acabara de dar clic en "Analizar".
+            boton.disabled = true;
+            boton.textContent = "Analizando...";
+            elementoEstado.innerHTML = `<span class="spinner"></span>Corriendo análisis de ${idRepo}...`;
+            revisarEstadoMetricas(boton, idRepo);
+        } else {
+            //-----> Ya termino (bien o mal) desde antes de que se cargara la
+            //-----> pagina: muestra el resultado final de una vez.
+            const huboFalla = fases.some(f => f.estado === "fallida" || f.estado === "omitida");
+            if (huboFalla) {
+                elementoEstado.textContent = `❌ El análisis de ${idRepo} no se completó. Revisa el CSV de incidencias.`;
+            } else {
+                elementoEstado.textContent = `✅ Terminado: ${idRepo}`;
+            }
+        }
+    } catch (error) {
+        //-----> Si el servidor esta caido justo al cargar la pagina, no hay
+        //-----> nada util que mostrar todavia -se deja como estaba (vacio)-.
+    }
+}
+
 
 // =====================================================================
 // ARRANQUE: al cargar la pagina, pide los datos de ambas secciones
@@ -448,3 +498,4 @@ cargarProgresoFases();
 cargarRankingMineria();
 cargarMetricas();
 cargarRepoUnicoSelect();
+revisarAlCargarPagina(); //-----> 🔌 NUEVO
