@@ -287,7 +287,7 @@ document.getElementById("btn-run-repo-unico").addEventListener("click", async ()
         return;
     }
 
-    //-----> 🔌 NUEVO: limpia las fases del analisis anterior antes de arrancar uno nuevo
+    //-----> Limpia las fases del analisis anterior antes de arrancar uno nuevo
     document.getElementById("fases-repo-unico").innerHTML = "";
 
     try {
@@ -317,16 +317,17 @@ document.getElementById("btn-run-repo-unico").addEventListener("click", async ()
     }
 });
 
-//-----> 🔌 NUEVO: nombres legibles para cada fase que manda el backend
+//-----> Nombres legibles para cada fase que manda el backend
 const NOMBRES_FASE = {
     estatica: "Métricas estáticas",
     benchmarks: "Benchmarks",
     caminos: "Cronómetro de caminos"
 };
 
-//-----> 🔌 NUEVO: pinta la lista de fases; cada una se queda fija en pantalla
+//-----> Pinta la lista de fases; cada una se queda fija en pantalla
 //-----> con spinner mientras corre, palomita si termino bien, o equis si
-//-----> fallo / se omitio (por ejemplo si benchmarks fallo y caminos nunca corrio).
+//-----> fallo / se omitio (por ejemplo si benchmarks fallo y caminos nunca corrio,
+//-----> o si el servidor se reinicio a la mitad del analisis).
 function renderizarFases(fases) {
     const contenedor = document.getElementById("fases-repo-unico");
     contenedor.innerHTML = "";
@@ -363,9 +364,12 @@ function renderizarFases(fases) {
     });
 }
 
-//-----> Antes un solo hipo de red hacia clearInterval() de inmediato; ahora
-//-----> solo se da por vencido despues de varios fallos SEGUIDOS.
-const INTENTOS_FALLIDOS_ANTES_DE_RENDIRSE = 3;
+//-----> 🔌 MODIFICADO: el servidor puede tardar ~30-40s en reiniciarse cuando
+//-----> el proceso murio por falta de memoria. Con un valor bajo, el frontend
+//-----> se rendia ANTES de que el servidor volviera, mostrando "Error de
+//-----> conexión" de forma prematura y perdiendo la oportunidad de mostrar
+//-----> el resultado real (fallido) una vez el servidor arriba de nuevo.
+const INTENTOS_FALLIDOS_ANTES_DE_RENDIRSE = 12; // 12 x 5s = 60s de margen
 
 //-----> Da sensacion de progreso real mostrando cuanto tiempo lleva el analisis
 function formatoTranscurrido(segundosTotales) {
@@ -391,20 +395,29 @@ function revisarEstadoMetricas(botonQueDisparo, idRepo) {
             //-----> Una respuesta exitosa reinicia el contador de fallos
             fallosConsecutivos = 0;
 
-            //-----> 🔌 NUEVO: pinta el progreso por fase, siempre con lo mas reciente
-            renderizarFases(estado.fases || []);
+            const fases = estado.fases || [];
+            renderizarFases(fases);
 
             if (!estado.corriendo) {
                 clearInterval(intervalo);
                 botonQueDisparo.disabled = false;
                 botonQueDisparo.textContent = "Analizar";
-                elementoEstado.textContent = `✅ Terminado: ${idRepo}`;
+
+                //-----> 🔌 NUEVO: corriendo=false no siempre significa exito -
+                //-----> tambien pasa cuando el servidor se reinicio a medias y
+                //-----> el backend marco el repo como fallido. Se revisan las
+                //-----> fases antes de decidir el mensaje final.
+                const huboFalla = fases.some(f => f.estado === "fallida" || f.estado === "omitida");
+
+                if (huboFalla) {
+                    elementoEstado.textContent = `❌ El análisis de ${idRepo} no se completó. Revisa el CSV de incidencias.`;
+                } else {
+                    elementoEstado.textContent = `✅ Terminado: ${idRepo}`;
+                }
 
                 cargarMetricas();
                 cargarRepoUnicoSelect();
             } else {
-                //-----> 🔌 MODIFICADO: el detalle de fase ahora vive en renderizarFases(),
-                //-----> aqui solo queda el mensaje generico + contador de tiempo
                 const transcurrido = formatoTranscurrido(Math.floor((Date.now() - inicio) / 1000));
                 elementoEstado.innerHTML =
                     `<span class="spinner"></span>Corriendo análisis de ${idRepo} · ${transcurrido}`;
@@ -413,7 +426,9 @@ function revisarEstadoMetricas(botonQueDisparo, idRepo) {
             fallosConsecutivos++;
 
             if (fallosConsecutivos < INTENTOS_FALLIDOS_ANTES_DE_RENDIRSE) {
-                elementoEstado.innerHTML = `<span class="spinner"></span>Reintentando conexión...`;
+                //-----> 🔌 MODIFICADO: mensaje mas claro de que puede ser un
+                //-----> reinicio del servidor, no solo un hipo de red comun
+                elementoEstado.innerHTML = `<span class="spinner"></span>Reintentando conexión (el servidor pudo haberse reiniciado)...`;
                 return;
             }
 
