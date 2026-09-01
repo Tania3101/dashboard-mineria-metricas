@@ -10,18 +10,12 @@ const URL_API_METRICAS  = "https://sd-java-metrics-extractor.onrender.com";
 // FUNCIONES DE AYUDA (ya listas, no hay que tocarlas)
 // =====================================================================
 
-//-----> Cambia el texto y el color de la etiqueta de estado
 function actualizarEtiquetaEstado(idEtiqueta, texto, tipo) {
-    // tipo puede ser: "exito", "alerta", "error", o vacio (neutro)
     const etiqueta = document.getElementById(idEtiqueta);
     etiqueta.textContent = texto;
     etiqueta.className = "etiqueta-estado" + (tipo ? " " + tipo : "");
 }
 
-//-----> Crea una fila visual tipo "Nombre: Valor".
-//-----> El tercer parametro es opcional: "exito", "error" o "alerta"
-//-----> para que el numero se pinte de verde/rojo/amarillo. Si no se
-//-----> manda, el valor se ve en negro normal (como antes).
 function crearFilaDato(nombre, valor, tipo) {
     const fila = document.createElement("div");
     fila.className = "fila-dato";
@@ -31,7 +25,6 @@ function crearFilaDato(nombre, valor, tipo) {
     return fila;
 }
 
-//-----> Limpia un contenedor y le pone un mensaje de error legible
 function mostrarError(idContenedor, mensaje) {
     const contenedor = document.getElementById(idContenedor);
     contenedor.innerHTML = "";
@@ -41,11 +34,6 @@ function mostrarError(idContenedor, mensaje) {
     contenedor.appendChild(p);
 }
 
-
-//-----> 🔌 NUEVO: arma la tabla estilo consola (3 columnas: pendientes /
-//-----> completos / fallidos) a partir de 3 arreglos de nombres de repo.
-//-----> Si una columna tiene menos elementos que las otras, esa celda
-//-----> simplemente queda vacia en esa fila.
 function construirTablaMatrix(pendientes, completos, fallidos) {
     const filasMax = Math.max(pendientes.length, completos.length, fallidos.length);
 
@@ -155,9 +143,6 @@ document.getElementById("btn-export-csv").addEventListener("click", () => {
     window.open(`${URL_API_MINERIA}/api/export/csv`, "_blank");
 });
 
-//-----> Boton para disparar /api/mining/run, con polling hasta que termine.
-//-----> El nuevo HTML ya no tiene el span "estado-mineria", asi que el
-//-----> propio boton muestra el estado en su texto mientras corre.
 document.getElementById("btn-run-mineria").addEventListener("click", async () => {
     const boton = document.getElementById("btn-run-mineria");
     boton.disabled = true;
@@ -173,7 +158,6 @@ document.getElementById("btn-run-mineria").addEventListener("click", async () =>
     }
 });
 
-//-----> Revisa el estado cada 5 segundos hasta que el pipeline termine
 function pollEstadoMineria(boton) {
     const intervalo = setInterval(async () => {
         try {
@@ -237,7 +221,6 @@ async function cargarMetricas() {
     }
 }
 
-//-----> Llena el selector con los repos que aun faltan por analizar
 async function cargarRepoUnicoSelect() {
     const select = document.getElementById("select-repo-unico");
 
@@ -275,7 +258,6 @@ async function cargarRepoUnicoSelect() {
     }
 }
 
-//-----> Boton para disparar /api/metrics/run?repo=... para el repo elegido
 document.getElementById("btn-run-repo-unico").addEventListener("click", async () => {
     const boton = document.getElementById("btn-run-repo-unico");
     const select = document.getElementById("select-repo-unico");
@@ -326,14 +308,12 @@ const NOMBRES_FASE = {
 
 //-----> Pinta la lista de fases; cada una se queda fija en pantalla
 //-----> con spinner mientras corre, palomita si termino bien, o equis si
-//-----> fallo / se omitio (por ejemplo si benchmarks fallo y caminos nunca corrio,
-//-----> o si el servidor se reinicio a la mitad del analisis).
+//-----> fallo / se omitio. Se queda en pantalla hasta el siguiente analisis.
 function renderizarFases(fases) {
     const contenedor = document.getElementById("fases-repo-unico");
     contenedor.innerHTML = "";
 
     fases.forEach(fase => {
-        //-----> Las que ni siquiera han arrancado no se muestran todavia
         if (fase.estado === "pendiente") return;
 
         const fila = document.createElement("div");
@@ -364,28 +344,21 @@ function renderizarFases(fases) {
     });
 }
 
-//-----> 🔌 MODIFICADO: el servidor puede tardar varios minutos en reiniciarse
-//-----> cuando el proceso murio por falta de memoria y ademas hay que recompilar
-//-----> un proyecto pesado. Se sube a un margen bastante mas generoso (5 min)
-//-----> para no rendirse antes de que el servidor vuelva a responder.
-const INTENTOS_FALLIDOS_ANTES_DE_RENDIRSE = 60; // 60 x 5s = 5 minutos de margen
+//-----> Tolerancia normal a hipos de red -ya no hace falta cubrir un
+//-----> reinicio completo del servidor, solo cortes breves de conexion.
+const INTENTOS_FALLIDOS_ANTES_DE_RENDIRSE = 3;
 
-//-----> Da sensacion de progreso real mostrando cuanto tiempo lleva el analisis
 function formatoTranscurrido(segundosTotales) {
     const min = Math.floor(segundosTotales / 60);
     const seg = segundosTotales % 60;
     return `${min}m ${String(seg).padStart(2, "0")}s`;
 }
 
-//-----> Revisa /api/metrics/status repetidamente hasta que el proceso termine.
-//-----> 🔌 MODIFICADO: ahora recibe el momento de inicio como parametro opcional,
-//-----> para que al retomar un analisis que ya estaba corriendo desde antes de
-//-----> recargar la pagina (ver revisarAlCargarPagina), el contador de tiempo
-//-----> no se reinicie desde 0 en la pantalla.
-function revisarEstadoMetricas(botonQueDisparo, idRepo, inicio) {
+//-----> Revisa /api/metrics/status repetidamente hasta que el proceso termine
+function revisarEstadoMetricas(botonQueDisparo, idRepo) {
     let fallosConsecutivos = 0;
     const elementoEstado = document.getElementById("estado-repo-unico");
-    const momentoInicio = inicio || Date.now();
+    const inicio = Date.now();
 
     const intervalo = setInterval(async () => {
         try {
@@ -395,7 +368,6 @@ function revisarEstadoMetricas(botonQueDisparo, idRepo, inicio) {
             }
             const estado = await respuesta.json();
 
-            //-----> Una respuesta exitosa reinicia el contador de fallos
             fallosConsecutivos = 0;
 
             const fases = estado.fases || [];
@@ -406,10 +378,6 @@ function revisarEstadoMetricas(botonQueDisparo, idRepo, inicio) {
                 botonQueDisparo.disabled = false;
                 botonQueDisparo.textContent = "Analizar";
 
-                //-----> corriendo=false no siempre significa exito - tambien pasa
-                //-----> cuando el servidor se reinicio a medias y el backend marco
-                //-----> el repo como fallido. Se revisan las fases antes de decidir
-                //-----> el mensaje final.
                 const huboFalla = fases.some(f => f.estado === "fallida" || f.estado === "omitida");
 
                 if (huboFalla) {
@@ -421,7 +389,7 @@ function revisarEstadoMetricas(botonQueDisparo, idRepo, inicio) {
                 cargarMetricas();
                 cargarRepoUnicoSelect();
             } else {
-                const transcurrido = formatoTranscurrido(Math.floor((Date.now() - momentoInicio) / 1000));
+                const transcurrido = formatoTranscurrido(Math.floor((Date.now() - inicio) / 1000));
                 elementoEstado.innerHTML =
                     `<span class="spinner"></span>Corriendo análisis de ${idRepo} · ${transcurrido}`;
             }
@@ -429,7 +397,7 @@ function revisarEstadoMetricas(botonQueDisparo, idRepo, inicio) {
             fallosConsecutivos++;
 
             if (fallosConsecutivos < INTENTOS_FALLIDOS_ANTES_DE_RENDIRSE) {
-                elementoEstado.innerHTML = `<span class="spinner"></span>Reintentando conexión (el servidor pudo haberse reiniciado)...`;
+                elementoEstado.innerHTML = `<span class="spinner"></span>Reintentando conexión...`;
                 return;
             }
 
@@ -441,55 +409,6 @@ function revisarEstadoMetricas(botonQueDisparo, idRepo, inicio) {
     }, 5000);
 }
 
-//-----> 🔌 NUEVO: al cargar la pagina (o recargarla), pregunta de una vez el
-//-----> estado real del servidor -sin esperar a que el usuario de clic en
-//-----> "Analizar"-. Cubre 2 casos: (1) el analisis sigue corriendo del lado
-//-----> del servidor y la pagina se recargo o el navegador se rindio antes de
-//-----> tiempo -aqui se retoma el polling automaticamente-, y (2) el ultimo
-//-----> analisis ya termino (bien o mal) y el usuario nunca vio el resultado
-//-----> final porque no estaba viendo la pantalla en ese momento.
-async function revisarAlCargarPagina() {
-    const boton = document.getElementById("btn-run-repo-unico");
-    const elementoEstado = document.getElementById("estado-repo-unico");
-
-    try {
-        const respuesta = await fetch(`${URL_API_METRICAS}/api/metrics/status`);
-        if (!respuesta.ok) return;
-
-        const estado = await respuesta.json();
-        const fases = estado.fases || [];
-
-        //-----> Si no hay ninguna fase registrada, nunca ha corrido nada
-        //-----> todavia -no hay nada que mostrar-.
-        if (fases.length === 0) return;
-
-        renderizarFases(fases);
-
-        const idRepo = estado.repoActual || "el repo";
-
-        if (estado.corriendo) {
-            //-----> Sigue corriendo del lado del servidor: retoma el polling
-            //-----> como si el usuario acabara de dar clic en "Analizar".
-            boton.disabled = true;
-            boton.textContent = "Analizando...";
-            elementoEstado.innerHTML = `<span class="spinner"></span>Corriendo análisis de ${idRepo}...`;
-            revisarEstadoMetricas(boton, idRepo);
-        } else {
-            //-----> Ya termino (bien o mal) desde antes de que se cargara la
-            //-----> pagina: muestra el resultado final de una vez.
-            const huboFalla = fases.some(f => f.estado === "fallida" || f.estado === "omitida");
-            if (huboFalla) {
-                elementoEstado.textContent = `❌ El análisis de ${idRepo} no se completó. Revisa el CSV de incidencias.`;
-            } else {
-                elementoEstado.textContent = `✅ Terminado: ${idRepo}`;
-            }
-        }
-    } catch (error) {
-        //-----> Si el servidor esta caido justo al cargar la pagina, no hay
-        //-----> nada util que mostrar todavia -se deja como estaba (vacio)-.
-    }
-}
-
 
 // =====================================================================
 // ARRANQUE: al cargar la pagina, pide los datos de ambas secciones
@@ -498,4 +417,3 @@ cargarProgresoFases();
 cargarRankingMineria();
 cargarMetricas();
 cargarRepoUnicoSelect();
-revisarAlCargarPagina(); //-----> 🔌 NUEVO
