@@ -134,13 +134,63 @@ async function cargarRankingMineria() {
     }
 }
 
-document.getElementById("btn-refresh-mineria").addEventListener("click", () => {
-    cargarProgresoFases();
-    cargarRankingMineria();
+//-----> MODIFICADO: descarga el ZIP con las 4 tablas de metricas.
+//-----> Usa fetch + blob (no window.open) para poder mostrar "Generando..."
+//-----> mientras se arma el archivo del lado del servidor, y para disparar
+//-----> la descarga sin abrir una pestaña nueva ni recargar la pagina.
+document.getElementById("btn-csv-metricas").addEventListener("click", async () => {
+    const boton = document.getElementById("btn-csv-metricas");
+    const textoOriginal = boton.innerHTML;
+    boton.disabled = true;
+    boton.textContent = "Generando...";
+
+    try {
+        const respuesta = await fetch(`${URL_API_METRICAS}/api/metrics/export/metricas`);
+        if (!respuesta.ok) throw new Error(`HTTP ${respuesta.status}`);
+
+        const blob = await respuesta.blob();
+        const url = window.URL.createObjectURL(blob);
+        const enlace = document.createElement("a");
+        enlace.href = url;
+        enlace.download = "metricas_export.zip";
+        document.body.appendChild(enlace);
+        enlace.click();
+        enlace.remove();
+        window.URL.revokeObjectURL(url);
+    } catch (error) {
+        alert("No se pudo generar el CSV de métricas.");
+    } finally {
+        boton.disabled = false;
+        boton.innerHTML = textoOriginal;
+    }
 });
 
-document.getElementById("btn-export-csv").addEventListener("click", () => {
-    window.open(`${URL_API_MINERIA}/api/export/csv`, "_blank");
+//-----> MODIFICADO: descarga el CSV de incidencias, mismo mecanismo
+document.getElementById("btn-csv-reporte").addEventListener("click", async () => {
+    const boton = document.getElementById("btn-csv-reporte");
+    const textoOriginal = boton.innerHTML;
+    boton.disabled = true;
+    boton.textContent = "Generando...";
+
+    try {
+        const respuesta = await fetch(`${URL_API_METRICAS}/api/metrics/export/incidencias`);
+        if (!respuesta.ok) throw new Error(`HTTP ${respuesta.status}`);
+
+        const blob = await respuesta.blob();
+        const url = window.URL.createObjectURL(blob);
+        const enlace = document.createElement("a");
+        enlace.href = url;
+        enlace.download = "incidencias.csv";
+        document.body.appendChild(enlace);
+        enlace.click();
+        enlace.remove();
+        window.URL.revokeObjectURL(url);
+    } catch (error) {
+        alert("No se pudo generar el CSV de incidencias.");
+    } finally {
+        boton.disabled = false;
+        boton.innerHTML = textoOriginal;
+    }
 });
 
 document.getElementById("btn-run-mineria").addEventListener("click", async () => {
