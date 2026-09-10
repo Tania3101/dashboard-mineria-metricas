@@ -341,19 +341,47 @@ function renderizarFases(fases, enVivo) {
     });
 }
 
-//-----> MODIFICADO: mas tolerancia a hipos de conexion antes de rendirse.
-//-----> Algunos repos (ej. proyectos Gradle que necesitan descargar su
-//-----> propia distribucion la primera vez) tardan mas y pueden generar
-//-----> cortes de red pasajeros que antes se interpretaban como error
-//-----> demasiado rapido. Sigue sin poder distinguir "se cayo el servidor"
-//-----> de "solo tardo en responder" -eso requeriria consultar Mongo, que
-//-----> por ahora se dejo fuera a proposito-.
 const INTENTOS_FALLIDOS_ANTES_DE_RENDIRSE = 24; // 24 x 5s = 2 minutos de margen
 
 function formatoTranscurrido(segundosTotales) {
     const min = Math.floor(segundosTotales / 60);
     const seg = segundosTotales % 60;
     return `${min}m ${String(seg).padStart(2, "0")}s`;
+}
+
+//-----> AGREGADO: consulta puntual al status REAL y persistente del repo en
+//-----> Mongo (via /api/metrics/repo, que ya existia). Solo se llama en el
+//-----> caso ambiguo -corriendo=false pero sin fases registradas-, que solo
+//-----> pasa cuando el servidor se reinicio a medias y perdio la memoria de
+//-----> EstadoAnalisis. No es polling ni recuperacion automatica: es una
+//-----> unica consulta bajo demanda, disparada por el frontend solo cuando
+//-----> la necesita.
+async function consultarStatusRealDelRepo(idRepo) {
+    try {
+        const respuesta = await fetch(`${URL_API_METRICAS}/api/metrics/repo?id=${encodeURIComponent(idRepo)}`);
+        if (!respuesta.ok) return null;
+        const repo = await respuesta.json();
+        return repo.status || null;
+    } catch (error) {
+        return null;
+    }
+}
+
+//-----> AGREGADO: traduce el status real de Mongo a un mensaje final para el usuario
+function mensajeSegunStatusReal(idRepo, status) {
+    switch (status) {
+        case "metrics_complete":
+            return `✅ Terminado: ${idRepo} (confirmado tras un reinicio del servidor)`;
+        case "metrics_static_only":
+            return `❌ El análisis de ${idRepo} solo llegó a estático (confirmado tras un reinicio del servidor). Revisa el CSV de incidencias.`;
+        case "metrics_failed":
+            return `❌ El análisis de ${idRepo} falló (confirmado tras un reinicio del servidor). Revisa el CSV de incidencias.`;
+        case "metrics_in_progress":
+        case "pending":
+            return `⚠️ El servidor se reinició a la mitad del análisis de ${idRepo} y quedó a medias. Vuelve a correrlo.`;
+        default:
+            return `⚠️ No se pudo confirmar el estado de ${idRepo} tras un posible reinicio del servidor. Verifícalo manualmente.`;
+    }
 }
 
 function revisarEstadoMetricas(botonQueDisparo, idRepo) {
@@ -379,17 +407,15 @@ function revisarEstadoMetricas(botonQueDisparo, idRepo) {
                 botonQueDisparo.disabled = false;
                 botonQueDisparo.textContent = "Analizar";
 
-                //-----> MODIFICADO: si no hay NINGUNA fase registrada y ya no
-                //-----> esta corriendo, no es un analisis exitoso -es imposible
-                //-----> que un analisis real termine sin haber marcado al menos
-                //-----> la fase estatica-. Esto solo pasa si el servidor se
-                //-----> reinicio a medias y perdio la memoria de EstadoAnalisis.
-                //-----> En ese caso NO se debe decir "Terminado" -seria un falso
-                //-----> positivo-, se avisa la ambiguedad en vez de inventar un
-                //-----> resultado.
+                //-----> MODIFICADO: caso ambiguo -sin fases registradas, solo
+                //-----> puede pasar tras un reinicio a medias-. En vez de solo
+                //-----> avisar la ambiguedad, se hace UNA consulta puntual al
+                //-----> status real y persistente en Mongo para dar un mensaje
+                //-----> concreto en vez de dejarlo en el aire.
                 if (fases.length === 0) {
-                    elementoEstado.textContent =
-                        `⚠️ No se pudo confirmar si ${idRepo} terminó — el servidor pudo haberse reiniciado durante el análisis. Verifica el estado del repo manualmente antes de asumir que se completó.`;
+                    elementoEstado.innerHTML = `<span class="spinner"></span>Verificando estado real tras posible reinicio...`;
+                    const statusReal = await consultarStatusRealDelRepo(idRepo);
+                    elementoEstado.textContent = mensajeSegunStatusReal(idRepo, statusReal);
                 } else {
                     const huboFalla = fases.some(f => f.estado === "fallida" || f.estado === "omitida");
 
