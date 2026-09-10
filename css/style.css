@@ -396,3 +396,106 @@ body {
     color: var(--color-error);
     font-weight: 700;
 }
+/* =================================================================
+   BOTON DE AYUDA FLOTANTE Y MODAL
+   ================================================================= */
+.boton-ayuda-flotante {
+    position: fixed;
+    bottom: 1.5rem;
+    right: 1.5rem;
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    border: none;
+    background-color: var(--color-primario);
+    color: white;
+    font-size: 1.3rem;
+    font-weight: 700;
+    cursor: pointer;
+    box-shadow: var(--sombra-tarjeta);
+    z-index: 100;
+    transition: background-color 0.15s ease;
+}
+
+.boton-ayuda-flotante:hover {
+    background-color: var(--color-primario-hover);
+}
+
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.45);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 200;
+    padding: 1rem;
+}
+
+.modal-caja {
+    background-color: var(--color-tarjeta);
+    border-radius: var(--radio-borde);
+    max-width: 480px;
+    width: 100%;
+    max-height: 85vh;
+    overflow-y: auto;
+    box-shadow: var(--sombra-tarjeta);
+}
+
+.modal-encabezado {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1.25rem 1.5rem 0.75rem;
+    border-bottom: 1px solid var(--color-borde);
+}
+
+.modal-encabezado h2 {
+    font-size: 1.15rem;
+    font-weight: 700;
+}
+
+.boton-cerrar-modal {
+    border: none;
+    background: none;
+    font-size: 1.1rem;
+    color: var(--color-texto-secundario);
+    cursor: pointer;
+    line-height: 1;
+    padding: 0.25rem;
+}
+
+.boton-cerrar-modal:hover {
+    color: var(--color-texto-principal);
+}
+
+.modal-contenido {
+    padding: 1rem 1.5rem 1.5rem;
+}
+
+.modal-contenido h3 {
+    font-size: 0.95rem;
+    font-weight: 600;
+    margin-top: 1rem;
+    margin-bottom: 0.5rem;
+}
+
+.modal-contenido h3:first-child {
+    margin-top: 0;
+}
+
+.modal-contenido ul {
+    padding-left: 1.1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+}
+
+.modal-contenido li {
+    font-size: 0.88rem;
+    line-height: 1.5;
+    color: var(--color-texto-principal);
+}

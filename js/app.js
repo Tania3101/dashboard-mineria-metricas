@@ -502,7 +502,23 @@ document.getElementById("btn-csv-reporte").addEventListener("click", async () =>
         boton.innerHTML = textoOriginal;
     }
 });
+// =====================================================================
+// BOTON DE AYUDA
+// =====================================================================
+document.getElementById("btn-ayuda").addEventListener("click", () => {
+    document.getElementById("modal-ayuda").style.display = "flex";
+});
 
+document.getElementById("btn-cerrar-ayuda").addEventListener("click", () => {
+    document.getElementById("modal-ayuda").style.display = "none";
+});
+
+//-----> Cierra el modal si se hace clic fuera de la caja blanca
+document.getElementById("modal-ayuda").addEventListener("click", (evento) => {
+    if (evento.target.id === "modal-ayuda") {
+        document.getElementById("modal-ayuda").style.display = "none";
+    }
+});
 
 // =====================================================================
 // ARRANQUE: al cargar la pagina, pide los datos de ambas secciones

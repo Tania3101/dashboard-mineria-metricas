@@ -98,7 +98,44 @@
     <footer class="pie-pagina">
         <p>Proyecto de tesis — SD-java-metrics-extractor + framework de minería</p>
     </footer>
+    <!-- ============================================= -->
+    <!-- BOTON DE AYUDA (flotante, abajo a la derecha)  -->
+    <!-- ============================================= -->
+    <button id="btn-ayuda" class="boton-ayuda-flotante" aria-label="Ayuda">?</button>
 
+    <div id="modal-ayuda" class="modal-overlay" style="display:none;">
+        <div class="modal-caja">
+            <div class="modal-encabezado">
+                <h2>Guía rápida</h2>
+                <button id="btn-cerrar-ayuda" class="boton-cerrar-modal" aria-label="Cerrar">✕</button>
+            </div>
+
+            <div class="modal-contenido">
+                <h3>Minería de repositorios</h3>
+                <ul>
+                    <li><strong>Correr minería</strong>: inicia el proceso que busca y evalúa repositorios nuevos. Puede tardar varios minutos.</li>
+                    <li><strong>Actualizar</strong>: refresca el progreso por fase y el ranking sin volver a correr nada.</li>
+                    <li><strong>Generar CSV</strong>: descarga el ranking completo de repos evaluados.</li>
+                </ul>
+
+                <h3>Extracción de métricas</h3>
+                <ul>
+                    <li><strong>Selecciona un repo</strong> de la lista de pendientes y da clic en <strong>Analizar</strong> para iniciar su análisis estático y dinámico.</li>
+                    <li>Mientras corre, verás una fase a la vez con un círculo girando (estática → benchmarks → cronómetro de caminos).</li>
+                    <li>Al terminar, se muestran las 3 fases con ✓ (completada) o ✗ (falló u omitida). Si ves un ✗, revisa el <strong>CSV de incidencias</strong>.</li>
+                    <li>Si el servidor se reinicia a la mitad del análisis, se te avisa y se verifica el resultado real automáticamente — no hace falta que hagas nada.</li>
+                </ul>
+
+                <h3>Exportar</h3>
+                <ul>
+                    <li><strong>CSV de métricas</strong>: descarga un ZIP con todas las métricas estáticas y dinámicas guardadas, de todos los repos ya analizados.</li>
+                    <li><strong>CSV de incidencias</strong>: descarga la lista de repos que fallaron o quedaron solo con estática, junto con la razón.</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/app.js"></script>
     <script src="js/app.js"></script>
 </body>
 </html>
