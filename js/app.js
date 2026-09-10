@@ -269,7 +269,6 @@ document.getElementById("btn-run-repo-unico").addEventListener("click", async ()
         return;
     }
 
-    //-----> Limpia las fases del analisis anterior antes de arrancar uno nuevo
     document.getElementById("fases-repo-unico").innerHTML = "";
 
     try {
@@ -299,20 +298,12 @@ document.getElementById("btn-run-repo-unico").addEventListener("click", async ()
     }
 });
 
-//-----> Nombres legibles para cada fase que manda el backend
 const NOMBRES_FASE = {
     estatica: "Métricas estáticas",
     benchmarks: "Benchmarks",
     caminos: "Cronómetro de caminos"
 };
 
-//-----> MODIFICADO: ahora recibe si el proceso sigue corriendo (enVivo).
-//-----> Mientras corre (enVivo=true): solo se muestra la fase que esta
-//-----> EN_PROGRESO ahora mismo, con su spinner -las fases ya resueltas no
-//-----> se van acumulando en pantalla durante la ejecucion-.
-//-----> Cuando ya termino todo (enVivo=false): se muestran TODAS las fases
-//-----> de una vez, cada una con su icono final (✓ o ✗), como un resumen
-//-----> que se queda fijo hasta el siguiente analisis.
 function renderizarFases(fases, enVivo) {
     const contenedor = document.getElementById("fases-repo-unico");
     contenedor.innerHTML = "";
@@ -350,7 +341,14 @@ function renderizarFases(fases, enVivo) {
     });
 }
 
-const INTENTOS_FALLIDOS_ANTES_DE_RENDIRSE = 3;
+//-----> MODIFICADO: mas tolerancia a hipos de conexion antes de rendirse.
+//-----> Algunos repos (ej. proyectos Gradle que necesitan descargar su
+//-----> propia distribucion la primera vez) tardan mas y pueden generar
+//-----> cortes de red pasajeros que antes se interpretaban como error
+//-----> demasiado rapido. Sigue sin poder distinguir "se cayo el servidor"
+//-----> de "solo tardo en responder" -eso requeriria consultar Mongo, que
+//-----> por ahora se dejo fuera a proposito-.
+const INTENTOS_FALLIDOS_ANTES_DE_RENDIRSE = 24; // 24 x 5s = 2 minutos de margen
 
 function formatoTranscurrido(segundosTotales) {
     const min = Math.floor(segundosTotales / 60);
@@ -358,7 +356,6 @@ function formatoTranscurrido(segundosTotales) {
     return `${min}m ${String(seg).padStart(2, "0")}s`;
 }
 
-//-----> Revisa /api/metrics/status repetidamente hasta que el proceso termine
 function revisarEstadoMetricas(botonQueDisparo, idRepo) {
     let fallosConsecutivos = 0;
     const elementoEstado = document.getElementById("estado-repo-unico");
@@ -375,7 +372,7 @@ function revisarEstadoMetricas(botonQueDisparo, idRepo) {
             fallosConsecutivos = 0;
 
             const fases = estado.fases || [];
-            renderizarFases(fases, estado.corriendo); //-----> MODIFICADO: se pasa si sigue corriendo
+            renderizarFases(fases, estado.corriendo);
 
             if (!estado.corriendo) {
                 clearInterval(intervalo);
@@ -413,10 +410,6 @@ function revisarEstadoMetricas(botonQueDisparo, idRepo) {
     }, 5000);
 }
 
-//-----> Descarga el ZIP con las 4 tablas de metricas.
-//-----> Usa fetch + blob (no window.open) para poder mostrar "Generando..."
-//-----> mientras se arma el archivo del lado del servidor, y para disparar
-//-----> la descarga sin abrir una pestaña nueva ni recargar la pagina.
 document.getElementById("btn-csv-metricas").addEventListener("click", async () => {
     const boton = document.getElementById("btn-csv-metricas");
     const textoOriginal = boton.innerHTML;
@@ -444,7 +437,6 @@ document.getElementById("btn-csv-metricas").addEventListener("click", async () =
     }
 });
 
-//-----> Descarga el CSV de incidencias, mismo mecanismo
 document.getElementById("btn-csv-reporte").addEventListener("click", async () => {
     const boton = document.getElementById("btn-csv-reporte");
     const textoOriginal = boton.innerHTML;
