@@ -379,12 +379,25 @@ function revisarEstadoMetricas(botonQueDisparo, idRepo) {
                 botonQueDisparo.disabled = false;
                 botonQueDisparo.textContent = "Analizar";
 
-                const huboFalla = fases.some(f => f.estado === "fallida" || f.estado === "omitida");
-
-                if (huboFalla) {
-                    elementoEstado.textContent = `❌ El análisis de ${idRepo} no se completó. Revisa el CSV de incidencias.`;
+                //-----> MODIFICADO: si no hay NINGUNA fase registrada y ya no
+                //-----> esta corriendo, no es un analisis exitoso -es imposible
+                //-----> que un analisis real termine sin haber marcado al menos
+                //-----> la fase estatica-. Esto solo pasa si el servidor se
+                //-----> reinicio a medias y perdio la memoria de EstadoAnalisis.
+                //-----> En ese caso NO se debe decir "Terminado" -seria un falso
+                //-----> positivo-, se avisa la ambiguedad en vez de inventar un
+                //-----> resultado.
+                if (fases.length === 0) {
+                    elementoEstado.textContent =
+                        `⚠️ No se pudo confirmar si ${idRepo} terminó — el servidor pudo haberse reiniciado durante el análisis. Verifica el estado del repo manualmente antes de asumir que se completó.`;
                 } else {
-                    elementoEstado.textContent = `✅ Terminado: ${idRepo}`;
+                    const huboFalla = fases.some(f => f.estado === "fallida" || f.estado === "omitida");
+
+                    if (huboFalla) {
+                        elementoEstado.textContent = `❌ El análisis de ${idRepo} no se completó. Revisa el CSV de incidencias.`;
+                    } else {
+                        elementoEstado.textContent = `✅ Terminado: ${idRepo}`;
+                    }
                 }
 
                 cargarMetricas();
