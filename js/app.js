@@ -134,63 +134,13 @@ async function cargarRankingMineria() {
     }
 }
 
-//-----> MODIFICADO: descarga el ZIP con las 4 tablas de metricas.
-//-----> Usa fetch + blob (no window.open) para poder mostrar "Generando..."
-//-----> mientras se arma el archivo del lado del servidor, y para disparar
-//-----> la descarga sin abrir una pestaña nueva ni recargar la pagina.
-document.getElementById("btn-csv-metricas").addEventListener("click", async () => {
-    const boton = document.getElementById("btn-csv-metricas");
-    const textoOriginal = boton.innerHTML;
-    boton.disabled = true;
-    boton.textContent = "Generando...";
-
-    try {
-        const respuesta = await fetch(`${URL_API_METRICAS}/api/metrics/export/metricas`);
-        if (!respuesta.ok) throw new Error(`HTTP ${respuesta.status}`);
-
-        const blob = await respuesta.blob();
-        const url = window.URL.createObjectURL(blob);
-        const enlace = document.createElement("a");
-        enlace.href = url;
-        enlace.download = "metricas_export.zip";
-        document.body.appendChild(enlace);
-        enlace.click();
-        enlace.remove();
-        window.URL.revokeObjectURL(url);
-    } catch (error) {
-        alert("No se pudo generar el CSV de métricas.");
-    } finally {
-        boton.disabled = false;
-        boton.innerHTML = textoOriginal;
-    }
+document.getElementById("btn-refresh-mineria").addEventListener("click", () => {
+    cargarProgresoFases();
+    cargarRankingMineria();
 });
 
-//-----> MODIFICADO: descarga el CSV de incidencias, mismo mecanismo
-document.getElementById("btn-csv-reporte").addEventListener("click", async () => {
-    const boton = document.getElementById("btn-csv-reporte");
-    const textoOriginal = boton.innerHTML;
-    boton.disabled = true;
-    boton.textContent = "Generando...";
-
-    try {
-        const respuesta = await fetch(`${URL_API_METRICAS}/api/metrics/export/incidencias`);
-        if (!respuesta.ok) throw new Error(`HTTP ${respuesta.status}`);
-
-        const blob = await respuesta.blob();
-        const url = window.URL.createObjectURL(blob);
-        const enlace = document.createElement("a");
-        enlace.href = url;
-        enlace.download = "incidencias.csv";
-        document.body.appendChild(enlace);
-        enlace.click();
-        enlace.remove();
-        window.URL.revokeObjectURL(url);
-    } catch (error) {
-        alert("No se pudo generar el CSV de incidencias.");
-    } finally {
-        boton.disabled = false;
-        boton.innerHTML = textoOriginal;
-    }
+document.getElementById("btn-export-csv").addEventListener("click", () => {
+    window.open(`${URL_API_MINERIA}/api/export/csv`, "_blank");
 });
 
 document.getElementById("btn-run-mineria").addEventListener("click", async () => {
@@ -356,15 +306,21 @@ const NOMBRES_FASE = {
     caminos: "Cronómetro de caminos"
 };
 
-//-----> Pinta la lista de fases; cada una se queda fija en pantalla
-//-----> con spinner mientras corre, palomita si termino bien, o equis si
-//-----> fallo / se omitio. Se queda en pantalla hasta el siguiente analisis.
-function renderizarFases(fases) {
+//-----> MODIFICADO: ahora recibe si el proceso sigue corriendo (enVivo).
+//-----> Mientras corre (enVivo=true): solo se muestra la fase que esta
+//-----> EN_PROGRESO ahora mismo, con su spinner -las fases ya resueltas no
+//-----> se van acumulando en pantalla durante la ejecucion-.
+//-----> Cuando ya termino todo (enVivo=false): se muestran TODAS las fases
+//-----> de una vez, cada una con su icono final (✓ o ✗), como un resumen
+//-----> que se queda fijo hasta el siguiente analisis.
+function renderizarFases(fases, enVivo) {
     const contenedor = document.getElementById("fases-repo-unico");
     contenedor.innerHTML = "";
 
     fases.forEach(fase => {
         if (fase.estado === "pendiente") return;
+
+        if (enVivo && fase.estado !== "en_progreso") return;
 
         const fila = document.createElement("div");
         fila.className = "fila-fase";
@@ -394,8 +350,6 @@ function renderizarFases(fases) {
     });
 }
 
-//-----> Tolerancia normal a hipos de red -ya no hace falta cubrir un
-//-----> reinicio completo del servidor, solo cortes breves de conexion.
 const INTENTOS_FALLIDOS_ANTES_DE_RENDIRSE = 3;
 
 function formatoTranscurrido(segundosTotales) {
@@ -421,7 +375,7 @@ function revisarEstadoMetricas(botonQueDisparo, idRepo) {
             fallosConsecutivos = 0;
 
             const fases = estado.fases || [];
-            renderizarFases(fases);
+            renderizarFases(fases, estado.corriendo); //-----> MODIFICADO: se pasa si sigue corriendo
 
             if (!estado.corriendo) {
                 clearInterval(intervalo);
@@ -458,6 +412,65 @@ function revisarEstadoMetricas(botonQueDisparo, idRepo) {
         }
     }, 5000);
 }
+
+//-----> Descarga el ZIP con las 4 tablas de metricas.
+//-----> Usa fetch + blob (no window.open) para poder mostrar "Generando..."
+//-----> mientras se arma el archivo del lado del servidor, y para disparar
+//-----> la descarga sin abrir una pestaña nueva ni recargar la pagina.
+document.getElementById("btn-csv-metricas").addEventListener("click", async () => {
+    const boton = document.getElementById("btn-csv-metricas");
+    const textoOriginal = boton.innerHTML;
+    boton.disabled = true;
+    boton.textContent = "Generando...";
+
+    try {
+        const respuesta = await fetch(`${URL_API_METRICAS}/api/metrics/export/metricas`);
+        if (!respuesta.ok) throw new Error(`HTTP ${respuesta.status}`);
+
+        const blob = await respuesta.blob();
+        const url = window.URL.createObjectURL(blob);
+        const enlace = document.createElement("a");
+        enlace.href = url;
+        enlace.download = "metricas_export.zip";
+        document.body.appendChild(enlace);
+        enlace.click();
+        enlace.remove();
+        window.URL.revokeObjectURL(url);
+    } catch (error) {
+        alert("No se pudo generar el CSV de métricas.");
+    } finally {
+        boton.disabled = false;
+        boton.innerHTML = textoOriginal;
+    }
+});
+
+//-----> Descarga el CSV de incidencias, mismo mecanismo
+document.getElementById("btn-csv-reporte").addEventListener("click", async () => {
+    const boton = document.getElementById("btn-csv-reporte");
+    const textoOriginal = boton.innerHTML;
+    boton.disabled = true;
+    boton.textContent = "Generando...";
+
+    try {
+        const respuesta = await fetch(`${URL_API_METRICAS}/api/metrics/export/incidencias`);
+        if (!respuesta.ok) throw new Error(`HTTP ${respuesta.status}`);
+
+        const blob = await respuesta.blob();
+        const url = window.URL.createObjectURL(blob);
+        const enlace = document.createElement("a");
+        enlace.href = url;
+        enlace.download = "incidencias.csv";
+        document.body.appendChild(enlace);
+        enlace.click();
+        enlace.remove();
+        window.URL.revokeObjectURL(url);
+    } catch (error) {
+        alert("No se pudo generar el CSV de incidencias.");
+    } finally {
+        boton.disabled = false;
+        boton.innerHTML = textoOriginal;
+    }
+});
 
 
 // =====================================================================
