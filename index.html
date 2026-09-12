@@ -86,6 +86,9 @@
                     <button id="btn-csv-reporte" class="boton boton-secundario boton-exportar">
                         <span class="icono-descarga">⬇</span> CSV de incidencias
                     </button>
+                    <button id="btn-csv-atorados" class="boton boton-secundario boton-exportar">
+                        <span class="icono-descarga">⬇</span> CSV de repos por memoria
+                    </button>
                 </div>
             </div>
         </section>
@@ -130,6 +133,7 @@
                 <ul>
                     <li><strong>CSV de métricas</strong>: descarga un ZIP con todas las métricas estáticas y dinámicas guardadas, de todos los repos ya analizados.</li>
                     <li><strong>CSV de incidencias</strong>: descarga la lista de repos que fallaron o quedaron solo con estática, junto con la razón.</li>
+                    <li><strong>CSV de repos por memoria</strong>: descarga la lista de repos que quedaron a medias porque el servidor se quedó sin memoria (común en proyectos Gradle pesados). Trae el link del repo y el comando para correrlo manualmente desde tu computadora con el archivo <code>.jar</code>, sin depender del servidor en la nube.</li>
                 </ul>
             </div>
         </div>

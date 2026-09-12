@@ -519,6 +519,32 @@ document.getElementById("modal-ayuda").addEventListener("click", (evento) => {
         document.getElementById("modal-ayuda").style.display = "none";
     }
 });
+document.getElementById("btn-csv-atorados").addEventListener("click", async () => {
+    const boton = document.getElementById("btn-csv-atorados");
+    const textoOriginal = boton.innerHTML;
+    boton.disabled = true;
+    boton.textContent = "Generando...";
+
+    try {
+        const respuesta = await fetch(`${URL_API_METRICAS}/api/metrics/export/atorados`);
+        if (!respuesta.ok) throw new Error(`HTTP ${respuesta.status}`);
+
+        const blob = await respuesta.blob();
+        const url = window.URL.createObjectURL(blob);
+        const enlace = document.createElement("a");
+        enlace.href = url;
+        enlace.download = "repos_atorados.csv";
+        document.body.appendChild(enlace);
+        enlace.click();
+        enlace.remove();
+        window.URL.revokeObjectURL(url);
+    } catch (error) {
+        alert("No se pudo generar el CSV de repos atorados.");
+    } finally {
+        boton.disabled = false;
+        boton.innerHTML = textoOriginal;
+    }
+});
 
 // =====================================================================
 // ARRANQUE: al cargar la pagina, pide los datos de ambas secciones
