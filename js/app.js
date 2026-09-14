@@ -205,6 +205,7 @@ async function cargarMetricas() {
 
         const statusRepos = datos.reposPorStatus;
         contenedor.appendChild(crearFilaDato("Completados", statusRepos.metrics_complete, "exito"));
+        contenedor.appendChild(crearFilaDato("Solo estático (memoria)", statusRepos.metrics_static_only, "alerta"));
         contenedor.appendChild(crearFilaDato("Fallidos", statusRepos.metrics_failed, "error"));
 
         const espacioTotalMB =
@@ -513,7 +514,7 @@ document.getElementById("btn-csv-atorados").addEventListener("click", async () =
         const url = window.URL.createObjectURL(blob);
         const enlace = document.createElement("a");
         enlace.href = url;
-        enlace.download = "repos_atorados.csv";
+        enlace.download = "repos_por_memoria.csv";
         document.body.appendChild(enlace);
         enlace.click();
         enlace.remove();

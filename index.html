@@ -133,7 +133,15 @@
                 <ul>
                     <li><strong>CSV de métricas</strong>: descarga un ZIP con todas las métricas estáticas y dinámicas guardadas, de todos los repos ya analizados.</li>
                     <li><strong>CSV de incidencias</strong>: descarga la lista de repos que fallaron o quedaron solo con estática, junto con la razón.</li>
-                    <li><strong>CSV de repos por memoria</strong>: descarga la lista de repos que quedaron a medias porque el servidor se quedó sin memoria (común en proyectos Gradle pesados). Trae el link del repo y el comando para correrlo manualmente desde tu computadora con el archivo <code>.jar</code>, sin depender del servidor en la nube.</li>
+                    <li><strong>CSV de repos por memoria</strong>: descarga la lista de repos cuya fase estática se completó pero se quedaron sin memoria en la Fase 1 (benchmarks) — común en proyectos Gradle pesados. Se detectan y mueven aquí automáticamente en cada corrida nueva. Trae el link del repo y el comando exacto para terminarlos.</li>
+                </ul>
+
+                <h3>Correr el JAR manualmente</h3>
+                <ul>
+                    <li><strong>Solo dinámica</strong> (repo que ya tiene estática completa, ej. los del CSV de memoria):<br>
+                        <code>java -cp app.jar almacenamiento.ReprocesarDinamico --repo:owner/nombre</code></li>
+                    <li><strong>Análisis completo</strong> (repo pendiente desde cero):<br>
+                        <code>java -cp app.jar almacenamiento.OrquestadorRepos --repo:owner/nombre</code></li>
                 </ul>
             </div>
         </div>
