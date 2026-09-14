@@ -499,33 +499,7 @@ document.getElementById("btn-csv-reporte").addEventListener("click", async () =>
     }
 });
 
-//-----> AGREGADO: descarga el CSV de repos atorados por falta de memoria
-document.getElementById("btn-csv-atorados").addEventListener("click", async () => {
-    const boton = document.getElementById("btn-csv-atorados");
-    const textoOriginal = boton.innerHTML;
-    boton.disabled = true;
-    boton.textContent = "Generando...";
 
-    try {
-        const respuesta = await fetch(`${URL_API_METRICAS}/api/metrics/export/atorados`);
-        if (!respuesta.ok) throw new Error(`HTTP ${respuesta.status}`);
-
-        const blob = await respuesta.blob();
-        const url = window.URL.createObjectURL(blob);
-        const enlace = document.createElement("a");
-        enlace.href = url;
-        enlace.download = "repos_por_memoria.csv";
-        document.body.appendChild(enlace);
-        enlace.click();
-        enlace.remove();
-        window.URL.revokeObjectURL(url);
-    } catch (error) {
-        alert("No se pudo generar el CSV de repos atorados.");
-    } finally {
-        boton.disabled = false;
-        boton.innerHTML = textoOriginal;
-    }
-});
 
 
 // =====================================================================
