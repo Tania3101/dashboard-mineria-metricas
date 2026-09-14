@@ -349,13 +349,10 @@ function formatoTranscurrido(segundosTotales) {
     return `${min}m ${String(seg).padStart(2, "0")}s`;
 }
 
-//-----> AGREGADO: consulta puntual al status REAL y persistente del repo en
-//-----> Mongo (via /api/metrics/repo, que ya existia). Solo se llama en el
-//-----> caso ambiguo -corriendo=false pero sin fases registradas-, que solo
-//-----> pasa cuando el servidor se reinicio a medias y perdio la memoria de
-//-----> EstadoAnalisis. No es polling ni recuperacion automatica: es una
-//-----> unica consulta bajo demanda, disparada por el frontend solo cuando
-//-----> la necesita.
+//-----> Consulta puntual al status REAL y persistente del repo en Mongo (via
+//-----> /api/metrics/repo). Solo se llama en el caso ambiguo -corriendo=false
+//-----> pero sin fases registradas-, que solo pasa cuando el servidor se
+//-----> reinicio a medias y perdio la memoria de EstadoAnalisis.
 async function consultarStatusRealDelRepo(idRepo) {
     try {
         const respuesta = await fetch(`${URL_API_METRICAS}/api/metrics/repo?id=${encodeURIComponent(idRepo)}`);
@@ -367,20 +364,23 @@ async function consultarStatusRealDelRepo(idRepo) {
     }
 }
 
-//-----> AGREGADO: traduce el status real de Mongo a un mensaje final para el usuario
+//-----> Traduce el status real de Mongo a un mensaje final para el usuario,
+//-----> mencionando la causa conocida mas comun (proyectos Gradle + memoria)
 function mensajeSegunStatusReal(idRepo, status) {
+    const pistaMemoria = " Esto suele pasar con proyectos Gradle que descargan su propia distribución la primera vez, agotando la memoria del contenedor (plan gratuito de Render, 512MB).";
+
     switch (status) {
         case "metrics_complete":
             return `✅ Terminado: ${idRepo} (confirmado tras un reinicio del servidor)`;
         case "metrics_static_only":
-            return `❌ El análisis de ${idRepo} solo llegó a estático (confirmado tras un reinicio del servidor). Revisa el CSV de incidencias.`;
+            return `❌ El análisis de ${idRepo} solo llegó a estático (confirmado tras un reinicio del servidor).${pistaMemoria} Revisa el CSV de incidencias.`;
         case "metrics_failed":
-            return `❌ El análisis de ${idRepo} falló (confirmado tras un reinicio del servidor). Revisa el CSV de incidencias.`;
+            return `❌ El análisis de ${idRepo} falló (confirmado tras un reinicio del servidor).${pistaMemoria} Revisa el CSV de incidencias.`;
         case "metrics_in_progress":
         case "pending":
-            return `⚠️ El servidor se reinició a la mitad del análisis de ${idRepo} y quedó a medias. Vuelve a correrlo.`;
+            return `⚠️ El servidor se reinició a la mitad del análisis de ${idRepo} y quedó a medias.${pistaMemoria} Vuelve a correrlo.`;
         default:
-            return `⚠️ No se pudo confirmar el estado de ${idRepo} tras un posible reinicio del servidor. Verifícalo manualmente.`;
+            return `⚠️ No se pudo confirmar el estado de ${idRepo} tras un posible reinicio del servidor.${pistaMemoria} Verifícalo manualmente.`;
     }
 }
 
@@ -407,11 +407,6 @@ function revisarEstadoMetricas(botonQueDisparo, idRepo) {
                 botonQueDisparo.disabled = false;
                 botonQueDisparo.textContent = "Analizar";
 
-                //-----> MODIFICADO: caso ambiguo -sin fases registradas, solo
-                //-----> puede pasar tras un reinicio a medias-. En vez de solo
-                //-----> avisar la ambiguedad, se hace UNA consulta puntual al
-                //-----> status real y persistente en Mongo para dar un mensaje
-                //-----> concreto en vez de dejarlo en el aire.
                 if (fases.length === 0) {
                     elementoEstado.innerHTML = `<span class="spinner"></span>Verificando estado real tras posible reinicio...`;
                     const statusReal = await consultarStatusRealDelRepo(idRepo);
@@ -500,6 +495,52 @@ document.getElementById("btn-csv-reporte").addEventListener("click", async () =>
     } finally {
         boton.disabled = false;
         boton.innerHTML = textoOriginal;
+    }
+});
+
+//-----> AGREGADO: descarga el CSV de repos atorados por falta de memoria
+document.getElementById("btn-csv-atorados").addEventListener("click", async () => {
+    const boton = document.getElementById("btn-csv-atorados");
+    const textoOriginal = boton.innerHTML;
+    boton.disabled = true;
+    boton.textContent = "Generando...";
+
+    try {
+        const respuesta = await fetch(`${URL_API_METRICAS}/api/metrics/export/atorados`);
+        if (!respuesta.ok) throw new Error(`HTTP ${respuesta.status}`);
+
+        const blob = await respuesta.blob();
+        const url = window.URL.createObjectURL(blob);
+        const enlace = document.createElement("a");
+        enlace.href = url;
+        enlace.download = "repos_atorados.csv";
+        document.body.appendChild(enlace);
+        enlace.click();
+        enlace.remove();
+        window.URL.revokeObjectURL(url);
+    } catch (error) {
+        alert("No se pudo generar el CSV de repos atorados.");
+    } finally {
+        boton.disabled = false;
+        boton.innerHTML = textoOriginal;
+    }
+});
+
+
+// =====================================================================
+// BOTON DE AYUDA
+// =====================================================================
+document.getElementById("btn-ayuda").addEventListener("click", () => {
+    document.getElementById("modal-ayuda").style.display = "flex";
+});
+
+document.getElementById("btn-cerrar-ayuda").addEventListener("click", () => {
+    document.getElementById("modal-ayuda").style.display = "none";
+});
+
+document.getElementById("modal-ayuda").addEventListener("click", (evento) => {
+    if (evento.target.id === "modal-ayuda") {
+        document.getElementById("modal-ayuda").style.display = "none";
     }
 });
 
