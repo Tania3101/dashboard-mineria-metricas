@@ -71,9 +71,7 @@
                 </div>
                 <p id="estado-repo-unico" class="texto-ayuda"></p>
 
-                <!-- 🔌 NUEVO: aqui se apilan las fases (estatica/benchmarks/caminos)
-                     con su icono (spinner, palomita o equis), cada una se queda
-                     fija en pantalla mientras dura el analisis -->
+                <!-- Aqui se apilan las fases (estatica/benchmarks/caminos) -->
                 <div id="fases-repo-unico" class="fases-analisis"></div>
             </div>
 
@@ -86,6 +84,7 @@
                     <button id="btn-csv-reporte" class="boton boton-secundario boton-exportar">
                         <span class="icono-descarga">⬇</span> CSV de incidencias
                     </button>
+                    <!-- AGREGADO: exportacion de repos atorados por memoria -->
                     <button id="btn-csv-atorados" class="boton boton-secundario boton-exportar">
                         <span class="icono-descarga">⬇</span> CSV de repos por memoria
                     </button>
@@ -101,6 +100,7 @@
     <footer class="pie-pagina">
         <p>Proyecto de tesis — SD-java-metrics-extractor + framework de minería</p>
     </footer>
+
     <!-- ============================================= -->
     <!-- BOTON DE AYUDA (flotante, abajo a la derecha)  -->
     <!-- ============================================= -->
@@ -139,7 +139,6 @@
         </div>
     </div>
 
-    <script src="js/app.js"></script>
     <script src="js/app.js"></script>
 </body>
 </html>
